@@ -2,6 +2,37 @@
 
 This records what the playground actually does, so design discussion starts from reality. The Producer owns this doc. Engineering keeps it in sync with code.
 
+## Look: plush toy
+
+Puff is drawn as a soft collectible plush. Everything is procedural (Canvas 2D), so tweaks are code changes. Review art changes on the pose sheet (`npm run dev`, then open `/sheet.html`).
+
+![Pose sheet](images/pose-sheet.png)
+
+- **Body:** radial shading with a rim light, felt texture, surface fuzz, and two layers of rounded fur clumps around the edge
+- **Details:** stitched belly patch, a little fabric tag on the side seam, felt cheeks
+- **Ears and tail:** soft cat-like ears with pink insides, and a pom-pom tail. Both are on springs
+- **Feet:** stubby mitten feet with toe beans that show whenever a sole turns toward you (sitting, kicking, dangling, belly flops)
+- **Face:** glossy bead eyes with fixed highlights and a drifting pupil, eyelids that blink and set mood, felt eyebrows, a heart nose, and a `:3` mouth by default
+
+### Expressions (13)
+
+neutral, happy, curious, surprised, panic (with sweat drop), angry, sad (with tears), smug, sleepy, sleep, dizzy, chew, hungry. A random **blep** (tongue out) can appear while Puff is calm.
+
+### Rig and secondary motion
+
+| Part | Driven by |
+| --- | --- |
+| Ears | Expression target (perk when surprised, droop when sad or sleepy, pinned back when angry), lift while falling, flop when held, random twitches |
+| Tail | Wags when happy or hugging, flicks when angry, wraps around the body when curled up, swings with acceleration |
+| Arms | Lag behind body motion, then settle |
+| Lean | Into walking direction, over the edge when peeking |
+| Breathing | Constant gentle swell, slower while asleep |
+| Face | Features slide toward where Puff is looking, which reads as a head turn |
+
+### Poses
+
+stand, sit (after about a second of idling), curl (napping), flop (belly flop), peek (over a ledge), hug (reaching for a resting cursor).
+
 ## Mood
 
 Four values from 0 to 1 that drift over time and shift with events.
@@ -27,17 +58,21 @@ Four values from 0 to 1 that drift over time and shift with events.
 | Dance | 0.04 + 0.55 × playful × energy × (0.5 + comfort) | Bounces, sways, sings notes |
 | Groom | 0.06 + 0.4 × (1 − comfort) | Fluffs and shakes its fur |
 | Stretch | 0.07 × energy, or after napping | Tall stretch and a yawn |
+| Belly flop | 0.04 + 0.35 × comfort × playful | Flops flat with feet kicking in the air |
+| Peek | 0.08 + 0.45 × curiosity × (0.6 + energy), on a ledge | Walks to the edge and leans over to look down. 18% chance it leans too far and falls |
+| Cuddle | 0.45 + 0.6 × comfort when the cursor rests just above it | Walks under the cursor and hugs it, purring with hearts |
 
 ## Interrupts
 
 | Trigger | Reaction |
 | --- | --- |
-| Click | Squash, squeak, sometimes a hop. 4 pokes within 3 s makes it grumpy. Poking a sleeping Puff earns a rude awakening |
+| Click | Squash, squeak, sometimes a hop. 4 pokes within 3 s makes it grumpy, 7 makes it sit down and cry with its back turned. Poking a sleeping Puff earns a rude awakening |
 | Rub without clicking | Purr, hearts, blush |
 | Press and drag | Dangles, legs kick. Release over 1000 px/s is a toss |
 | Very fast cursor nearby | Startled leap away |
 | Focus or typing in a field within 150 px, or on the field Puff is sitting on | Panicked escape leap. Typing is never blocked |
 | Its platform moves (scroll) | Wobbles. A jump of more than 24 px in one frame may knock it off |
+| Hard landing (not tumbling) | 35% chance of a happy belly flop |
 | Landing after a tumble | 55% upside down with leg flailing, then flips back angry. Otherwise dazed |
 | Hitting a wall fast | Bonk and dizzy on landing |
 
@@ -57,9 +92,9 @@ Words are classified locally into affinities: nature, food, music, technology, w
 | Unknown | 45% spits it out, otherwise "hm" |
 | 3+ words or over 18 characters | Burp |
 
-## Discoveries (21)
+## Discoveries (26)
 
-Poke, purring pet, picked up, big toss, typing escape, shaken off by scrolling, ledge hang, pull-up, botched leap, tripped mid-hop, wall bonk, unexpected nap, rude awakening, dance break, first snack, spat it out, big bite, read the page, cursor chase, too fast, upside-down landing.
+Poke, purring pet, picked up, big toss, typing escape, shaken off by scrolling, ledge hang, pull-up, botched leap, tripped mid-hop, wall bonk, unexpected nap, rude awakening, dance break, first snack, spat it out, big bite, read the page, cursor chase, too fast, upside-down landing, belly flop, peeking over the edge, cursor cuddle, sulking, blep.
 
 ## Open design questions for the Director
 

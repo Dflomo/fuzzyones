@@ -36,6 +36,11 @@ export type BuddyEventType =
   | 'buddy_napped'
   | 'buddy_danced'
   | 'object_inspected'
+  | 'buddy_flopped'
+  | 'buddy_peeked'
+  | 'buddy_cuddled'
+  | 'buddy_sulked'
+  | 'buddy_blepped'
   // environment
   | 'input_escaped'
   | 'word_eaten'

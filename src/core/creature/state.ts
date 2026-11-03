@@ -15,9 +15,40 @@ export type Expression =
   | 'dizzy'
   | 'sleepy'
   | 'sleep'
-  | 'chew';
+  | 'chew'
+  | 'sad'
+  | 'smug';
 
 export type ArmPose = 'rest' | 'chin';
+
+/** Whole-body poses the renderer draws differently. Locomotion overrides to 'stand'. */
+export type Pose = 'stand' | 'sit' | 'curl' | 'flop' | 'peek' | 'hug';
+
+/**
+ * Secondary motion. Springs driven by body acceleration and expression so
+ * ears, tail and arms lag and overshoot like a soft toy.
+ */
+export interface Rig {
+  earL: number;
+  earR: number;
+  earVL: number;
+  earVR: number;
+  tail: number;
+  tailV: number;
+  armLag: number;
+  armLagV: number;
+  lean: number;
+  breath: number;
+  prevVx: number;
+  prevVy: number;
+  /** Seconds left of a random ear twitch (which ear by sign). */
+  twitch: number;
+  /** Tongue-out micro-expression until this sim time. */
+  blepUntil: number;
+  /** 0 to 1, face parallax toward where it is looking. */
+  faceX: number;
+  faceY: number;
+}
 
 export interface Mood {
   energy: number;
@@ -30,14 +61,40 @@ export interface Species {
   id: string;
   name: string;
   radius: number;
-  palette: { fur: string; furDark: string; belly: string; line: string; pupil: string };
+  palette: {
+    fur: string;
+    furLight: string;
+    furDark: string;
+    belly: string;
+    innerEar: string;
+    pad: string;
+    line: string;
+    stitch: string;
+    iris: string;
+    pupil: string;
+    nose: string;
+    tag: string;
+  };
 }
 
 export const PUFF: Species = {
   id: 'puff',
   name: 'Puff',
-  radius: 30,
-  palette: { fur: '#f5a3bb', furDark: '#df7896', belly: '#ffd9e3', line: '#4a2433', pupil: '#22181f' },
+  radius: 32,
+  palette: {
+    fur: '#f4a2b9',
+    furLight: '#ffd0dd',
+    furDark: '#cf6f8c',
+    belly: '#fff0e6',
+    innerEar: '#ffc3d1',
+    pad: '#f0789a',
+    line: '#4a2433',
+    stitch: '#b8577a',
+    iris: '#5b3a2e',
+    pupil: '#1d1417',
+    nose: '#c4486f',
+    tag: '#fdf7ea',
+  },
 };
 
 export interface HangState {
@@ -99,6 +156,15 @@ export interface CreatureState {
   nextBlink: number;
   look: { x: number; y: number } | null;
   arm: ArmPose;
+  pose: Pose;
+  /** Which edge a peek or hug points at: -1 left, 1 right. */
+  poseSide: -1 | 1;
+  /** Where hug arms reach, in viewport coords. */
+  reach: { x: number; y: number } | null;
+  /** Seconds the buddy has been standing still. Drives idle sitting. */
+  stillFor: number;
+  tears: number;
+  rig: Rig;
   hungryNear: boolean;
   mood: Mood;
 }
@@ -114,7 +180,12 @@ export function createCreature(species: Species = PUFF, x = 240, y = -90): Creat
     held: false, hang: null, leap: null, tumble: false, pendingDizzy: false, flipT: null,
     asleep: false, hidden: false,
     expr: 'surprised', exprUntil: 1.2, blink: 1, blinkStart: -9, nextBlink: 2,
-    look: null, arm: 'rest', hungryNear: false,
+    look: null, arm: 'rest', pose: 'stand', poseSide: 1, reach: null, stillFor: 0, tears: 0,
+    rig: {
+      earL: 0, earR: 0, earVL: 0, earVR: 0, tail: 0, tailV: 0, armLag: 0, armLagV: 0, lean: 0,
+      breath: 0, prevVx: 0, prevVy: 0, twitch: 0, blepUntil: 0, faceX: 0, faceY: 0,
+    },
+    hungryNear: false,
     mood: { energy: 0.55, curiosity: 0.75, playfulness: 0.7, comfort: 0.6 },
   };
 }

@@ -23,7 +23,11 @@ const idle: Behavior<{ dur: number; nextLook: number }> = {
       c.look = { x: c.x + rng.range(-300, 300), y: c.y + rng.range(-220, 60) };
       if (rng.chance(0.3)) c.facing = c.facing === 1 ? -1 : 1;
     }
+    if (t > 0.9 && c.grounded) c.pose = 'sit';
     return t > d.dur;
+  },
+  end: ({ c }) => {
+    if (c.pose === 'sit') c.pose = 'stand';
   },
 };
 
@@ -352,7 +356,143 @@ const stretch: Behavior<{ dur: number }> = {
   },
 };
 
-export const BEHAVIORS: readonly Behavior<any>[] = [idle, wander, hop, explore, chase, nap, inspect, dance, groom, stretch];
+const flop: Behavior<{ dur: number; kick: number }> = {
+  id: 'flop',
+  label: 'Belly flopping',
+  score: ({ c }) => 0.04 + 0.35 * c.mood.comfort * c.mood.playfulness,
+  start(ctx, d) {
+    d.dur = ctx.rng.range(2.6, 4);
+    d.kick = 0;
+    ctx.c.sy = 0.6;
+    ctx.c.sx = 1.35;
+    ctx.sound('plop', 0.25);
+    ctx.discover('belly_flop');
+    ctx.emit('buddy_flopped', { cause: 'lazy' });
+  },
+  update(ctx, d, dt, t) {
+    const { c } = ctx;
+    if (!c.grounded) return true;
+    c.pose = 'flop';
+    c.legPhase += dt * 9;
+    ctx.setExpr(t < d.dur * 0.7 ? 'happy' : 'neutral', 0.2);
+    if (t > d.kick) {
+      d.kick = t + 1.1;
+      ctx.sound('squeak');
+    }
+    ctx.adjustMood('comfort', dt * 0.03);
+    return t > d.dur;
+  },
+  end: ({ c }) => {
+    if (c.pose === 'flop') c.pose = 'stand';
+  },
+};
+
+const peek: Behavior<{ side: -1 | 1; phase: number; t1: number; oops: boolean }> = {
+  id: 'peek',
+  label: 'Peeking over the edge',
+  score: ({ c }) => (c.platformId ? 0.08 + 0.45 * c.mood.curiosity * (0.6 + c.mood.energy) : 0),
+  start(ctx, d) {
+    const { c, rng } = ctx;
+    const s = ctx.currentSurface();
+    const r = c.species.radius;
+    d.side = rng.chance(0.5) ? -1 : 1;
+    d.phase = 0;
+    d.t1 = 0;
+    d.oops = rng.chance(0.18);
+    c.walkTo = d.side < 0 ? s.left + r * 0.15 : s.right - r * 0.15;
+    c.walkSpeed = 80;
+  },
+  update(ctx, d, _dt, t) {
+    const { c } = ctx;
+    if (!c.grounded || !c.platformId) return true;
+    const s = ctx.currentSurface();
+    if (d.phase === 0 && (c.walkTo === null || t > 5)) {
+      d.phase = 1;
+      d.t1 = t;
+      c.walkTo = null;
+      c.facing = d.side;
+      ctx.discover('peek');
+      ctx.emit('buddy_peeked', { surface: s.kind });
+    }
+    if (d.phase === 1) {
+      c.pose = 'peek';
+      c.poseSide = d.side;
+      c.look = { x: c.x + d.side * 60, y: c.y + 260 };
+      ctx.setExpr('curious', 0.3);
+      const dt1 = t - d.t1;
+      if (d.oops && dt1 > 1.4) {
+        // leaned a bit too far
+        c.pose = 'stand';
+        ctx.setExpr('panic', 99);
+        ctx.sound('startle');
+        ctx.effect('!', { accent: true });
+        c.x += d.side * c.species.radius * 0.6;
+        c.tumble = ctx.rng.chance(0.5);
+        return true; // the edge check drops it next frame and emits buddy_fell
+      }
+      if (dt1 > 2.4) return true;
+    }
+    return false;
+  },
+  end: ({ c }) => {
+    if (c.pose === 'peek') c.pose = 'stand';
+    c.walkTo = null;
+  },
+};
+
+/** Cursor resting nearby: Puff reaches up and hugs it. */
+const cuddle: Behavior<{ dur: number; purr: number; told: boolean }> = {
+  id: 'cuddle',
+  label: 'Cuddling your cursor',
+  score: (ctx) => {
+    const { c, world, now } = ctx;
+    const p = world.pointer;
+    if (!p.inside || now - p.lastMoveAt < 0.8 || now - p.lastMoveAt > 12) return 0;
+    const dist = Math.hypot(p.x - c.x, p.y - c.y);
+    return dist < 170 && p.y < c.y + 10 ? 0.45 + 0.6 * c.mood.comfort : 0;
+  },
+  start(ctx, d) {
+    d.dur = ctx.rng.range(4, 7);
+    d.purr = 0;
+    d.told = false;
+  },
+  update(ctx, d, dt, t) {
+    const { c, world, now } = ctx;
+    const p = world.pointer;
+    if (!c.grounded || !p.inside || now - p.lastMoveAt < 0.15 || t > d.dur) return true;
+    const dist = Math.hypot(p.x - c.x, p.y - c.y);
+    if (dist > 220) return true;
+    c.facing = sign(p.x - c.x);
+    if (Math.abs(p.x - c.x) > 18) {
+      c.walkTo = p.x;
+      c.walkSpeed = 70;
+      return false;
+    }
+    c.walkTo = null;
+    c.pose = 'hug';
+    c.reach = { x: p.x, y: p.y };
+    ctx.setExpr('happy', 0.3);
+    if (!d.told) {
+      d.told = true;
+      ctx.discover('cuddle');
+      ctx.emit('buddy_cuddled');
+    }
+    if (t > d.purr) {
+      d.purr = t + 1.6;
+      ctx.sound('purr');
+      ctx.effect('♥', { accent: true, size: 14, x: p.x, y: p.y - 10 });
+    }
+    ctx.adjustMood('comfort', dt * 0.05);
+    return false;
+  },
+  end: ({ c }) => {
+    if (c.pose === 'hug') c.pose = 'stand';
+    c.reach = null;
+    c.walkTo = null;
+  },
+};
+
+export const BEHAVIORS: readonly Behavior<any>[] = [idle, wander, hop, explore, chase, nap, inspect, dance, groom, stretch, flop, peek, cuddle];
 
 export function behaviorById(id: string): Behavior<any> | undefined {
   return BEHAVIORS.find((b) => b.id === id);

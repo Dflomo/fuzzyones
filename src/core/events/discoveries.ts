@@ -21,6 +21,11 @@ export const DISCOVERIES = {
   chase: 'Cursor chase',
   startle: 'Too fast!',
   flip: 'Upside-down landing',
+  belly_flop: 'Belly flop',
+  peek: 'Peeking over the edge',
+  cuddle: 'Cursor cuddle',
+  sulk: 'Sulking',
+  blep: 'Blep',
 } as const;
 
 export type DiscoveryKey = keyof typeof DISCOVERIES;

@@ -97,3 +97,70 @@ describe('Buddy engine (headless)', () => {
     expect(a.buddy.c.x).toBeCloseTo(b.buddy.c.x, 6);
   });
 });
+
+describe('Plush rig and poses', () => {
+  it('curls up when asleep and keeps the rig numerically sane', () => {
+    const { buddy, run } = setup(3);
+    run(2);
+    buddy.c.mood.energy = 0.02;
+    buddy.startBehavior('nap');
+    run(2);
+    expect(buddy.c.asleep).toBe(true);
+    expect(buddy.c.pose).toBe('curl');
+    expect(buddy.c.rig.earL).toBeGreaterThan(0.5); // ears droop
+    for (const v of Object.values(buddy.c.rig)) expect(Number.isFinite(v)).toBe(true);
+  });
+
+  it('sits while idling and stands to walk', () => {
+    const { buddy, run } = setup(4);
+    run(2);
+    buddy.startBehavior('idle');
+    run(1.2);
+    expect(buddy.c.pose).toBe('sit');
+    buddy.startBehavior('wander');
+    run(0.5);
+    if (buddy.c.walking) expect(buddy.c.pose).toBe('stand');
+  });
+
+  it('hugs a resting cursor nearby', () => {
+    const { buddy, world, events, run } = setup(6);
+    run(2);
+    world.pointer = { x: buddy.c.x + 5, y: buddy.c.y - 60, vx: 0, vy: 0, lastMoveAt: buddy.now - 1, inside: true };
+    buddy.startBehavior('cuddle');
+    run(1);
+    expect(buddy.c.pose).toBe('hug');
+    expect(events.some((e) => e.type === 'buddy_cuddled')).toBe(true);
+  });
+
+  it('peeks over the edge of its ledge', () => {
+    const { buddy, events, run } = setup(8, [heading('h1', 300, 100, 500)]);
+    run(1.5);
+    expect(buddy.c.platformId).toBe('h1');
+    buddy.startBehavior('peek');
+    run(5);
+    expect(events.some((e) => e.type === 'buddy_peeked')).toBe(true);
+  });
+
+  it('sulks after a long poke streak', () => {
+    const { buddy, events, run } = setup(9);
+    run(2);
+    for (let i = 0; i < 7; i++) {
+      buddy.poke();
+      run(0.1);
+    }
+    expect(events.some((e) => e.type === 'buddy_sulked')).toBe(true);
+    expect(buddy.c.expr).toBe('sad');
+  });
+
+  it('ears flop up while falling', () => {
+    const { buddy, run } = setup(10);
+    run(4);
+    buddy.launch(0, -900);
+    for (let i = 0; i < 51; i++) {
+      buddy.setExpr('neutral', 99); // isolate the fall from expression ear targets
+      run(1 / 60);
+    }
+    expect(buddy.c.vy).toBeGreaterThan(0);
+    expect(buddy.c.rig.earL).toBeLessThan(0.12);
+  });
+});

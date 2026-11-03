@@ -8,7 +8,9 @@ Players raise small fuzzy creatures that live in the browser (and later the desk
 
 ## Status
 
-Phase 1: one buddy, Puff, in a browser playground. See [docs/ROADMAP.md](docs/ROADMAP.md).
+Phase 1: one buddy, Puff, in a browser playground. See [docs/ROADMAP.md](docs/ROADMAP.md). Open `/sheet.html` in dev for the pose sheet.
+
+![Puff pose sheet](docs/images/pose-sheet.png)
 
 ## Run it
 
@@ -16,6 +18,7 @@ Phase 1: one buddy, Puff, in a browser playground. See [docs/ROADMAP.md](docs/RO
 npm install
 npm run dev     # open http://localhost:5173 and meet Puff
 npm test        # headless creature simulation tests
+node scripts/build-single.mjs puff.html   # one self-contained playable file
 ```
 
 ## Layout

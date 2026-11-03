@@ -7,6 +7,7 @@
  * sanctuary.
  */
 import { makeEffect, stepEffects, type Effect, type EffectOptions } from './animation/effects';
+import { stepRig } from './animation/rig';
 import { silentAudio, type AudioPort, type SoundCue } from './audio/cues';
 import { BEHAVIORS, behaviorById } from './behavior/library';
 import { pushRecent, scoreBehaviors, type ScoredBehavior } from './behavior/selector';
@@ -179,6 +180,19 @@ export class Buddy implements BuddyContext {
       this.react('Rudely awakened', 1.6);
       return;
     }
+    if (this.pokes.length >= 7) {
+      this.setExpr('sad', 3.2);
+      c.tears = 3;
+      c.facing = c.facing === 1 ? -1 : 1;
+      this.sound('yawn');
+      this.adjustMood('comfort', -0.15);
+      this.emit('buddy_sulked', { pokes: this.pokes.length });
+      this.discover('sulk');
+      this.react('Sulking', 3.2);
+      c.pose = 'sit';
+      this.pokes = [];
+      return;
+    }
     if (this.pokes.length >= 4) {
       this.setExpr('angry', 1.6);
       this.sound('angry');
@@ -228,7 +242,7 @@ export class Buddy implements BuddyContext {
     const c = this.c;
     this.wake();
     this.endBehavior();
-    Object.assign(c, { held: true, hang: null, leap: null, flipT: null, grounded: false, platformId: null, walkTo: null, restSy: 1.2, restSx: 0.86 });
+    Object.assign(c, { pose: 'stand', reach: null, held: true, hang: null, leap: null, flipT: null, grounded: false, platformId: null, walkTo: null, restSy: 1.2, restSx: 0.86 });
     this.setExpr('surprised', 99);
     this.sound('chirp');
     this.emit('buddy_picked_up');
@@ -342,6 +356,8 @@ export class Buddy implements BuddyContext {
 
     stepSprings(this.c, dt);
     if (this.c.flipT !== null && this.c.flipT < 0.8) this.c.legPhase += dt * 30;
+    this.stepPose(dt);
+    stepRig(this.c, world, dt, this.now, this.rng);
     this.stepFace();
     this.stepActivity(dt);
     stepEffects(this.effects, dt);
@@ -403,7 +419,7 @@ export class Buddy implements BuddyContext {
       c.y = s.top - r;
       Object.assign(c, { grounded: true, platformId: s.id, platformTop: s.top, sy: 0.7, sx: 1.2 });
       this.sound('squeak');
-      this.setExpr('happy', 1.2);
+      this.setExpr('smug', 1.6);
       this.emit('buddy_climbed', { surface: s.kind });
       this.discover('climb');
     } else {
@@ -525,6 +541,15 @@ export class Buddy implements BuddyContext {
           }
         },
       });
+      return;
+    }
+    if (!wasTumble && !c.pendingDizzy && impact > 950 && this.rng.chance(0.35)) {
+      this.setExpr('happy', 1.6);
+      this.sound('squeak');
+      this.discover('belly_flop');
+      this.emit('buddy_flopped', { cause: 'landing' });
+      this.react('Belly flop', 1.5, { update: (t) => { if (t > 1.45) c.pose = 'stand'; } });
+      c.pose = 'flop';
       return;
     }
     if (impact > 1250 || c.pendingDizzy || wasTumble) {
@@ -662,6 +687,24 @@ export class Buddy implements BuddyContext {
     }
   }
 
+  private stepPose(dt: number): void {
+    const c = this.c;
+    if (!c.grounded || c.held || c.hang) {
+      c.pose = 'stand';
+      c.reach = null;
+    } else if (c.asleep) c.pose = 'curl';
+    else if (c.pose === 'curl') c.pose = 'stand';
+    if (c.walking && c.pose !== 'stand') c.pose = 'stand';
+    c.stillFor = c.grounded && !c.walking && !c.held ? c.stillFor + dt : 0;
+    if (c.tears > 0) c.tears = Math.max(0, c.tears - dt);
+    // Blep: a rare tongue-out micro-expression while calm.
+    if (c.grounded && !c.asleep && c.expr === 'neutral' && c.stillFor > 1 && this.now > c.rig.blepUntil + 4 && this.rng.chance(dt * 0.04)) {
+      c.rig.blepUntil = this.now + 1.4;
+      this.emit('buddy_blepped');
+      this.discover('blep');
+    }
+  }
+
   private stepFace(): void {
     const c = this.c;
     if (this.now > c.nextBlink) {
@@ -676,6 +719,8 @@ export class Buddy implements BuddyContext {
   private react(label: string, dur: number, o: { waitGround?: boolean; update?: (t: number, dt: number) => void } = {}): void {
     this.endBehavior();
     this.c.walkTo = null;
+    if (this.c.pose !== 'curl') this.c.pose = 'stand';
+    this.c.reach = null;
     this.activity = { kind: 'reaction', label, t: 0, dur, waitGround: o.waitGround ?? true, update: o.update };
   }
 
