@@ -10,6 +10,26 @@ Players raise small fuzzy creatures that live in the browser (and later the desk
 
 Phase 1: one buddy, Puff, in a browser playground. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
+## Run it
+
+```bash
+npm install
+npm run dev     # open http://localhost:5173 and meet Puff
+npm test        # headless creature simulation tests
+```
+
+## Layout
+
+```
+src/
+  core/        creature engine, DOM-free: state, behavior, physics, events, audio cues, effects
+  browser/     host adapter: page surfaces, pointer, typing, drag-and-drop, Web Audio, storage
+  rendering/   procedural Canvas 2D renderer
+  ui/          playground inspector panel
+tests/         unit tests and headless simulations
+docs/          vision, roadmap, architecture, game design, ADRs
+```
+
 ## Docs
 
 | Doc | What it covers |

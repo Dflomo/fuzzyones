@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fuzzy Buddies Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+</head>
+<body>
+<canvas id="stage" aria-hidden="true"></canvas>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div class="wrap">
+<header class="top">
+  <h1 class="mark">Fuzzy Buddies</h1>
+  <span class="tag">Prototype 0.1 · one buddy · phases 1 to 3 slice</span>
+</header>
+
+<div class="grid">
+<article>
+  <p class="lede">Puff lives on this page. Headings, the picture and the note box are all surfaces it can stand on, jump to, hang from or get knocked off of. Nothing here is scripted end to end: Puff picks what to do from its own moods, and the panel shows why.</p>
+
+  <h2 data-surface="heading">Things to try</h2>
+  <ul class="try">
+    <li><b>Poke</b><span>Click Puff once. Poke it a few times fast and it gets grumpy.</span></li>
+    <li><b>Pet</b><span>Rub your cursor back and forth over Puff without clicking.</span></li>
+    <li><b>Pick up</b><span>Press on Puff and drag. Let go mid swing to toss it.</span></li>
+    <li><b>Feed</b><span>Drag a word from the pantry onto Puff, or select any word on this page and drag it over. On a phone, tap a pantry word.</span></li>
+    <li><b>Type</b><span>Click the note box while Puff is nearby. It will clear out of your way.</span></li>
+    <li><b>Scroll</b><span>Scroll while Puff stands on a heading. Gentle scrolls make it wobble, hard ones knock it off.</span></li>
+    <li><b>Wait</b><span>Leave it alone for a minute. It explores, dances, grooms and eventually naps.</span></li>
+  </ul>
+
+  <figure>
+    <div class="ledge" data-surface="image" data-word="moss,mushroom,ledge,meadow"><i class="stem" style="left:calc(22% + 12px)"></i><i class="stem" style="left:calc(64% + 12px)"></i></div>
+    <figcaption>The Mossy Ledge. Puff likes to climb up here.</figcaption>
+  </figure>
+
+  <h2 data-surface="heading">The pantry</h2>
+  <p>Every word Puff eats is sorted into an affinity, like nature, music or weather. Later these feed evolution. For now they mostly change how Puff reacts.</p>
+  <div class="pantry" id="pantry"></div>
+
+  <h2 data-surface="heading">Orchard notes</h2>
+  <p>Moss grows on the north side of the old oak, and the bees work the clover until the fog rolls in. Somebody left a synth running in the barn, humming a slow melody under the thunder. There is honey on the windowsill and a riddle carved into the gate.</p>
+  <p>Select any of these words and drag them onto Puff. It has opinions.</p>
+
+  <h2 data-surface="heading">Leave a note</h2>
+  <div class="notebox" data-surface="input">
+    <label for="note">Note to the Director</label>
+    <textarea id="note" placeholder="Type here. Puff will get out of your way."></textarea>
+  </div>
+  <p class="small">Typing is never delayed or blocked. Puff only reacts after the fact.</p>
+
+  <h2 data-surface="heading">How Puff decides</h2>
+  <p>Every few seconds Puff scores each behavior against its current energy, curiosity, playfulness and comfort, adds a little randomness, and subtracts a penalty for anything it did recently. The winner runs until it finishes or something interrupts it: a poke, a toss, typing nearby, or the floor moving under its feet.</p>
+  <p>The same movement code handles a clean jump and a botched one. A leap can land, end in a ledge hang, or fall short, so the comedy comes from the physics instead of canned clips.</p>
+  <p>Discoveries in the panel are the first seed of progression. Each one fires a <code>new_behavior_discovered</code> event into the same stream that will later drive experience and evolution.</p>
+</article>
+
+<aside aria-label="Creature inspector">
+  <div class="who"><h3 id="bname">Puff</h3><span class="stage">Stage I · Puff</span></div>
+  <div class="doing" id="doing">Arriving <span>· just dropped in</span></div>
+  <div>
+    <p class="lbl">Mood</p>
+    <div class="bars" id="moods"></div>
+  </div>
+  <div class="why">
+    <p class="lbl">Why this? Top scores at last decision</p>
+    <div class="bars" id="why"></div>
+  </div>
+  <div class="controls">
+    <button id="bSound" aria-pressed="true">Sound on</button>
+    <button id="bMode" aria-pressed="false">Mode: Dynamic</button>
+    <button id="bHide">Hide Puff</button>
+    <button id="bCall">Call Puff</button>
+  </div>
+  <div>
+    <p class="lbl">Discoveries <span id="dcount"></span></p>
+    <div class="found" id="found"></div>
+  </div>
+  <div>
+    <p class="lbl">Affinities from snacks</p>
+    <div class="bars" id="aff"></div>
+  </div>
+  <div>
+    <p class="lbl">Event stream</p>
+    <div class="log" id="log"></div>
+  </div>
+</aside>
+</div>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
