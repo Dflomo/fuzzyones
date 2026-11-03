@@ -3,6 +3,7 @@
  * Keep this serializable-ish so it can later be persisted or sent to a
  * sanctuary process.
  */
+import { PUFF, type Species } from './species';
 
 export type Expression =
   | 'neutral'
@@ -57,45 +58,8 @@ export interface Mood {
   comfort: number;
 }
 
-export interface Species {
-  id: string;
-  name: string;
-  radius: number;
-  palette: {
-    fur: string;
-    furLight: string;
-    furDark: string;
-    belly: string;
-    innerEar: string;
-    pad: string;
-    line: string;
-    stitch: string;
-    iris: string;
-    pupil: string;
-    nose: string;
-    tag: string;
-  };
-}
-
-export const PUFF: Species = {
-  id: 'puff',
-  name: 'Puff',
-  radius: 32,
-  palette: {
-    fur: '#f4a2b9',
-    furLight: '#ffd0dd',
-    furDark: '#cf6f8c',
-    belly: '#fff0e6',
-    innerEar: '#ffc3d1',
-    pad: '#f0789a',
-    line: '#4a2433',
-    stitch: '#b8577a',
-    iris: '#5b3a2e',
-    pupil: '#1d1417',
-    nose: '#c4486f',
-    tag: '#fdf7ea',
-  },
-};
+export type { Species } from './species';
+export { PUFF } from './species';
 
 export interface HangState {
   surfaceId: string;

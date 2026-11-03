@@ -8,9 +8,9 @@ Players raise small fuzzy creatures that live in the browser (and later the desk
 
 ## Status
 
-Phase 1: one buddy, Puff, in a browser playground. See [docs/ROADMAP.md](docs/ROADMAP.md). Open `/sheet.html` in dev for the pose sheet.
+Phase 1: one buddy, Puff, in a browser playground. See [docs/ROADMAP.md](docs/ROADMAP.md). Five starter species share one engine. Pick one in the playground panel, or open `/sheet.html` in dev for the lineup.
 
-![Puff pose sheet](docs/images/pose-sheet.png)
+![Starter lineup](docs/images/lineup.png)
 
 ## Run it
 

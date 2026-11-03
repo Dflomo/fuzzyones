@@ -3,6 +3,7 @@ export interface SaveData {
   version: 1;
   discovered: string[];
   affinities: Record<string, number>;
+  species?: string;
 }
 
 const KEY = 'fuzzy-buddies:v1';

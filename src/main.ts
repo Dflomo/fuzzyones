@@ -1,6 +1,7 @@
 /** Playground entry: wires the core engine to the browser host, renderer, audio and inspector. */
 import './ui/playground.css';
 import { Buddy } from './core/buddy';
+import { PUFF, SPECIES, speciesById } from './core/creature/species';
 import { BrowserHost } from './browser/host';
 import { loadSave, writeSave } from './browser/storage';
 import { WebAudioPort } from './browser/webAudio';
@@ -9,7 +10,7 @@ import { Inspector } from './ui/inspector';
 
 const save = loadSave();
 const audio = new WebAudioPort();
-const buddy = new Buddy({ audio, discovered: save.discovered, spawnX: Math.min(innerWidth * 0.3, 240) });
+const buddy = new Buddy({ audio, species: speciesById(save.species ?? '') ?? PUFF, discovered: save.discovered, spawnX: Math.min(innerWidth * 0.3, 240) });
 
 let simTime = 0;
 const host = new BrowserHost(buddy, () => simTime);
@@ -104,13 +105,37 @@ $('bHide').onclick = () => {
     buddy.call();
     buddy.emit('buddy_returned');
   }
-  $('bHide').textContent = hide ? 'Show Puff' : 'Hide Puff';
+  $('bHide').textContent = hide ? 'Show buddy' : 'Hide buddy';
 };
 $('bCall').onclick = () => {
   buddy.call();
-  $('bHide').textContent = 'Hide Puff';
+  $('bHide').textContent = 'Hide buddy';
   buddy.emit('buddy_called');
 };
+
+// Species picker: swap the creature's body; mood, discoveries and behavior carry over.
+const speciesEl = document.getElementById('species')!;
+const renderSpecies = () => {
+  const cur = buddy.c.species;
+  document.getElementById('bname')!.textContent = cur.name;
+  document.getElementById('bstage')!.textContent = `Stage I · ${cur.tagline}`;
+  speciesEl.innerHTML = '';
+  for (const sp of SPECIES) {
+    const b = document.createElement('button');
+    b.setAttribute('aria-pressed', String(sp.id === cur.id));
+    b.innerHTML = `<i style="background:${sp.palette.fur}"></i>${sp.name}`;
+    b.onclick = () => {
+      buddy.c.species = sp;
+      save.species = sp.id;
+      writeSave(save);
+      audio.unlock();
+      audio.play('chirp');
+      renderSpecies();
+    };
+    speciesEl.appendChild(b);
+  }
+};
+renderSpecies();
 
 // Main loop.
 buddy.emit('buddy_arrived', { species: buddy.c.species.id });

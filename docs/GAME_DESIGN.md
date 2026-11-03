@@ -2,11 +2,23 @@
 
 This records what the playground actually does, so design discussion starts from reality. The Producer owns this doc. Engineering keeps it in sync with code.
 
+## Starter species
+
+Five species share every behavior, reaction and physics rule. Only the body differs, defined as data in `src/core/creature/species.ts` and assembled from parts in `src/rendering/parts.ts`. Switch species from the playground panel. Review art on the lineup (`npm run dev`, then open `/sheet.html`).
+
+![Starter lineup](images/lineup.png)
+
+| Species | Theme | Silhouette |
+| --- | --- | --- |
+| Puff | Affection, comfort, bouncing | Peach marshmallow cloud, long floppy bunny ears, cotton tail, freckles |
+| Mossling | Nature, exploration, climbing | Mossy green ball, leaf ears, sprout on top, tiny flowers, leaf tail |
+| Impkin | Mischief, tricks, energetic movement | Small plum egg, bat ears, cream horns, heart-tipped tail, one fang |
+| Glimmer | Music, light, floating | Sky-blue fluff that hovers and glows, side fins, star antenna, twinkling freckles, sparkle wisp |
+| Oddling | Mystery, mimicry, unusual movement | Mustard fluff, one big eye and single brow, one floppy ear and one curly antenna, ringed tail, belly swirl |
+
 ## Look: plush toy
 
-Puff is drawn as a soft collectible plush. Everything is procedural (Canvas 2D), so tweaks are code changes. Review art changes on the pose sheet (`npm run dev`, then open `/sheet.html`).
-
-![Pose sheet](images/pose-sheet.png)
+All species are drawn as soft collectible plushes. Everything is procedural (Canvas 2D), so tweaks are code changes.
 
 - **Body:** radial shading with a rim light, felt texture, surface fuzz, and two layers of rounded fur clumps around the edge
 - **Details:** stitched belly patch, a little fabric tag on the side seam, felt cheeks
@@ -98,7 +110,7 @@ Poke, purring pet, picked up, big toss, typing escape, shaken off by scrolling, 
 
 ## Open design questions for the Director
 
-1. Puff's look: keep the pink pom-pom, or explore the other four starter silhouettes first?
+1. Which starter should be the hero we polish first?
 2. Should Puff ever leave the viewport on its own (walk off screen and come back)?
 3. How often may it make noise unprompted before it feels like too much?
 4. Should affinities shift Puff's appearance subtly before evolution exists (fur tint, sparkle)?

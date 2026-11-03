@@ -59,7 +59,11 @@
 </article>
 
 <aside aria-label="Creature inspector">
-  <div class="who"><h3 id="bname">Puff</h3><span class="stage">Stage I · Puff</span></div>
+  <div class="who"><h3 id="bname">Puff</h3><span class="stage" id="bstage">Stage I</span></div>
+  <div>
+    <p class="lbl">Species</p>
+    <div class="species" id="species" role="group" aria-label="Choose a species"></div>
+  </div>
   <div class="doing" id="doing">Arriving <span>· just dropped in</span></div>
   <div>
     <p class="lbl">Mood</p>
@@ -72,8 +76,8 @@
   <div class="controls">
     <button id="bSound" aria-pressed="true">Sound on</button>
     <button id="bMode" aria-pressed="false">Mode: Dynamic</button>
-    <button id="bHide">Hide Puff</button>
-    <button id="bCall">Call Puff</button>
+    <button id="bHide">Hide buddy</button>
+    <button id="bCall">Call buddy</button>
   </div>
   <div>
     <p class="lbl">Discoveries <span id="dcount"></span></p>
