@@ -20,4 +20,4 @@ Phases come from [VISION.md](VISION.md). Each milestone should be small, visuall
 4. **M1.4 Personality traits.** Per-buddy seeded traits (bold vs timid, tidy vs scruffy) that weight behavior scores and reactions.
 5. **M1.5 Sound pass.** Per-cue cooldowns, volume slider, quiet mode.
 
-Everything in Phases 5 to 7 waits until the Ultimate Quality Test passes: someone leaves Puff running because they enjoy watching it.
+Everything in Phases 5 to 7 waits until the Ultimate Quality Test passes: someone leaves their buddy running because they enjoy watching it.

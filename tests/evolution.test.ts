@@ -1,5 +1,5 @@
 import { Buddy } from '../src/core/buddy';
-import { IMPKIN, MOSSLING, PUFF, SPECIES } from '../src/core/creature/species';
+import { BEAN, CAPPY, PIP, SPECIES } from '../src/core/creature/species';
 import { classifyElement, emptyElements } from '../src/core/evolution/elements';
 import { formName, resolveForm } from '../src/core/evolution/forms';
 import { Progression, stageFiveForm, THRESHOLDS } from '../src/core/evolution/progression';
@@ -8,7 +8,7 @@ import { emptyWorld } from '../src/core/world';
 
 function rig(seed = 5) {
   const buddy = new Buddy({ rng: createRng(seed) });
-  const growth = new Progression(buddy, PUFF);
+  const growth = new Progression(buddy, CAPPY);
   const world = emptyWorld(1000, 700);
   const run = (s: number) => {
     for (let t = 0; t < s; t += 1 / 60) {
@@ -42,22 +42,22 @@ describe('elements', () => {
 
 describe('forms', () => {
   it('grows bigger each stage and tints at Stage IV', () => {
-    const r = [1, 2, 3, 4, 5].map((stage) => resolveForm(PUFF, { stage: stage as 1, element: stage >= 4 ? 'fire' : null, secondary: null }).radius);
+    const r = [1, 2, 3, 4, 5].map((stage) => resolveForm(CAPPY, { stage: stage as 1, element: stage >= 4 ? 'fire' : null, secondary: null }).radius);
     for (let i = 1; i < r.length; i++) expect(r[i]).toBeGreaterThan(r[i - 1]);
-    expect(resolveForm(PUFF, { stage: 4, element: 'fire', secondary: null }).palette.fur).not.toBe(PUFF.palette.fur);
+    expect(resolveForm(CAPPY, { stage: 4, element: 'fire', secondary: null }).palette.fur).not.toBe(CAPPY.palette.fur);
   });
 
   it('names every form', () => {
-    expect(formName(PUFF, { stage: 1, element: null, secondary: null })).toBe('Puffbit');
-    expect(formName(MOSSLING, { stage: 4, element: 'earth', secondary: null })).toBe('Pebblemoss');
-    expect(formName(IMPKIN, { stage: 5, element: 'fire', secondary: null })).toBe('Blazefiend');
-    expect(formName(PUFF, { stage: 5, element: 'water', secondary: 'light' })).toBe('Abyss-Halo Mallow');
+    expect(formName(CAPPY, { stage: 1, element: null, secondary: null })).toBe('Capling');
+    expect(formName(PIP, { stage: 4, element: 'earth', secondary: null })).toBe('Pebblepip');
+    expect(formName(BEAN, { stage: 5, element: 'fire', secondary: null })).toBe('Blazegazer');
+    expect(formName(CAPPY, { stage: 5, element: 'water', secondary: 'light' })).toBe('Abyss-Halo Shroom');
   });
 
   it('gives every species distinct traits and silhouettes', () => {
-    const shapes = new Set(SPECIES.map((s) => `${s.design.bodyW}/${s.design.bodyH}/${s.design.taper}/${s.design.flat}`));
-    expect(shapes.size).toBe(5);
+    expect(new Set(SPECIES.map((s) => s.design.body)).size).toBe(5);
     expect(new Set(SPECIES.map((s) => s.design.gait)).size).toBe(5);
+    expect(new Set(SPECIES.map((s) => JSON.stringify(s.traits.bias))).size).toBe(5);
   });
 });
 
@@ -82,7 +82,7 @@ describe('progression', () => {
     run(0.3);
     buddy.poke();
     run(0.1);
-    expect(buddy.c.species.name).toBe('Puff');
+    expect(buddy.c.species.name).toBe('Cappy');
     expect(growth.state.stage).toBe(2);
   });
 
@@ -113,7 +113,7 @@ describe('progression', () => {
     grow();
     expect(growth.state.stage).toBe(4);
     expect(growth.state.element).toBe('fire');
-    expect(buddy.c.species.name).toBe('Emberpuff');
+    expect(buddy.c.species.name).toBe('Embercap');
     expect(buddy.c.species.design.element).toBe('fire');
   });
 
@@ -128,7 +128,7 @@ describe('progression', () => {
     feed(['midnight', 'shadow', 'ghost', 'ember', 'cave']);
     grow();
     expect(growth.form).toEqual({ stage: 5, element: 'fire', secondary: 'shadow' });
-    expect(growth.status().name).toBe('Blaze-Dusk Mallow');
+    expect(growth.status().name).toBe('Blaze-Dusk Shroom');
   });
 
   it('keeps stage and elements when switching species', () => {
@@ -138,9 +138,9 @@ describe('progression', () => {
     grow();
     feed(['ocean', 'raindrop', 'river']);
     grow();
-    growth.setBase(MOSSLING);
-    expect(buddy.c.species.name).toBe('Tidemoss');
-    expect(buddy.c.species.radius).toBeGreaterThan(MOSSLING.radius);
+    growth.setBase(PIP);
+    expect(buddy.c.species.name).toBe('Tidepip');
+    expect(buddy.c.species.radius).toBeGreaterThan(PIP.radius);
   });
 
   it('never evolves past Stage V and stays sane through the animation', () => {

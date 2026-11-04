@@ -1,32 +1,20 @@
-# Game Design: Puff, as built
+# Game Design: the starter cast, as built
 
 This records what the playground actually does, so design discussion starts from reality. The Producer owns this doc. Engineering keeps it in sync with code.
 
 ## Starter species
 
-Five species share every behavior, reaction and physics rule. Only the body differs, defined as data in `src/core/creature/species.ts` and assembled from parts in `src/rendering/parts.ts`. Switch species from the playground panel. Review art on the lineup (`npm run dev`, then open `/sheet.html`).
+Director decisions, 2026-11-04: squishy vinyl style, and this cast. Concept rounds are in `docs/concepts/little-ones/`.
 
-![Starter lineup](images/lineup.png)
+Five species share every behavior, reaction and physics rule. Only the body and temperament differ. Bodies are drawn in `src/rendering/bodies.ts`; data (palette, face and limb anchors, traits) lives in `src/core/creature/species.ts`. Switch species from the playground panel, or open `/sheet.html` in dev for every form.
 
-| Species | Theme | Silhouette |
-| --- | --- | --- |
-| Puff | Affection, comfort, bouncing | Peach marshmallow cloud, long floppy bunny ears, cotton tail, freckles |
-| Mossling | Nature, exploration, climbing | Mossy green ball, leaf ears, sprout on top, tiny flowers, leaf tail |
-| Impkin | Mischief, tricks, energetic movement | Small plum egg, bat ears, cream horns, heart-tipped tail, one fang |
-| Glimmer | Music, light, floating | Sky-blue fluff that hovers and glows, side fins, star antenna, twinkling freckles, sparkle wisp |
-| Oddling | Mystery, mimicry, unusual movement | Mustard fluff, one big eye and single brow, one floppy ear and one curly antenna, ringed tail, belly swirl |
-
-## Species personalities
-
-Same engine, different bodies and temperaments. Personality comes from multipliers on behavior scores, plus walk speed, hop height and gait.
-
-| Species | Silhouette | Gait | Speed / hop | Loves | Avoids |
-| --- | --- | --- | --- | --- | --- |
-| Puff | Wide, squat marshmallow | Waddle (side-to-side tilt) | 0.8 / 0.9 | Cuddles, belly flops, naps | Exploring, chasing |
-| Mossling | Tall acorn, narrow top | Steady stride | 0.85 / 1.0 | Peeking over edges, leaping to ledges, investigating | Dancing |
-| Impkin | Small egg, bat wings from Stage III | Bouncy scamper | 1.4 / 1.35 | Chasing your cursor, hopping | Naps, cuddles, grooming |
-| Glimmer | Dome that hovers, ribbon tendrils for feet | Floats | 0.9 / 0.8 | Dancing, idling | Hopping, flopping |
-| Oddling | Tall wobbly bean, one eye | Wobble | 1.0 / 1.1 | Investigating, stretching | Cuddles |
+| Species | What it is | Look | Gait | Speed / hop | Loves | Avoids |
+| --- | --- | --- | --- | --- | --- | --- |
+| Cappy | Mushroom | Red spotted cap that bobs on a cream stem, face on the stem | Waddle | 0.8 / 0.85 | Naps, grooming, peeking | Chasing, hopping |
+| Pip | Seed | Striped almond seed with a two-leaf sprout that sways | Scamper (bouncy) | 1.1 / 1.25 | Leaping to ledges, peeking, hopping | Naps |
+| Blorp | Squishy alien | Mint jelly gumdrop with a drippy bottom, bubbles inside, antennae, a tiny third eye | Jiggle | 0.95 / 1.15 | Belly flops, dancing, hopping | Peeking |
+| Bean | Cuddly cyclops | Tall orange bean, one big eye, round ears, hair tuft, two tiny teeth, mitten feet | Stride | 1.0 / 0.9 | Cursor cuddles, chasing | Exploring |
+| Oddling | Wire tangle | Springy copper and teal wires with coils poking out, one eye on a cream disc, floppy ear, curly antenna, ringed tail | Wobble | 1.15 / 1.2 | Investigating, stretching, peeking | Cuddles |
 
 ## Growth and evolution
 
@@ -38,7 +26,7 @@ Same engine, different bodies and temperaments. Personality comes from multiplie
 | --- | --- | --- |
 | I | 74% | Baby: big eyes, tiny ears, nub horns, no markings |
 | II | 100% | The species as designed |
-| III | 110% | Stage III flourish: Puff gets a bow, Mossling's sprout blooms, Impkin grows bat wings, a star orbits Glimmer, Oddling gets spots |
+| III | 110% | Stage III flourish: a baby mushroom sprouts on Cappy's cap, Pip's sprout grows a bud, a tiny moon orbits Blorp, Bean grows horns, Oddling's antenna bobble lights up |
 | IV | 118% | Takes an element: fur tint, iris color, head crest, body marks, aura, ambient particles |
 | V | 128% | Deepens the element with a mantle behind the body, or blends in a second element's marks and particles |
 
@@ -66,21 +54,15 @@ Fed words are classified locally: a word list first, then a fallback from the wo
 
 ### Names
 
-Stages I to III have species names (Puffbit, Puff, Pufflop). Stage IV and V combine an element prefix with a species stem: Emberpuff, Blazemallow, Pebblemoss, Bouldergrove. Blends hyphenate both elements: Blaze-Dusk Mallow.
+Stages I to III have species names (Capling, Cappy, Capsworth). Stage IV and V combine an element prefix with a species stem: Embercap, Blazeshroom, Pebblepip, Boulderbloom, Tideblorp, Duskbean, Tempesttangle. Blends hyphenate both elements: Blaze-Dusk Shroom.
 
-## Look: plush toy
+## Look: squishy vinyl
 
-All species are drawn as soft collectible plushes. Everything is procedural (Canvas 2D), so tweaks are code changes.
-
-- **Body:** radial shading with a rim light, felt texture, surface fuzz, and two layers of rounded fur clumps around the edge
-- **Details:** stitched belly patch, a little fabric tag on the side seam, felt cheeks
-- **Ears and tail:** soft cat-like ears with pink insides, and a pom-pom tail. Both are on springs
-- **Feet:** stubby mitten feet with toe beans that show whenever a sole turns toward you (sitting, kicking, dangling, belly flops)
-- **Face:** glossy bead eyes with fixed highlights and a drifting pupil, eyelids that blink and set mood, felt eyebrows, a heart nose, and a `:3` mouth by default
+Every creature is drawn procedurally in Canvas 2D with one shared material (`src/rendering/vinyl.ts`): a glossy gradient, a soft bounce light along the bottom, a big specular highlight and a faint darker rim. Eyes are glossy with a fixed shine and a pupil that follows your cursor; Bean's single eye has a white and a colored iris. Art review happens on `/sheet.html`.
 
 ### Expressions (13)
 
-neutral, happy, curious, surprised, panic (with sweat drop), angry, sad (with tears), smug, sleepy, sleep, dizzy, chew, hungry. A random **blep** (tongue out) can appear while Puff is calm.
+neutral, happy, curious, surprised, panic (with sweat drop), angry, sad (with tears), smug, sleepy, sleep, dizzy, chew, hungry. A random **blep** (tongue out) can appear while a buddy is calm.
 
 ### Rig and secondary motion
 
@@ -91,7 +73,7 @@ neutral, happy, curious, surprised, panic (with sweat drop), angry, sad (with te
 | Arms | Lag behind body motion, then settle |
 | Lean | Into walking direction, over the edge when peeking |
 | Breathing | Constant gentle swell, slower while asleep |
-| Face | Features slide toward where Puff is looking, which reads as a head turn |
+| Face | Features slide toward where the buddy is looking, which reads as a head turn |
 
 ### Poses
 
@@ -130,11 +112,11 @@ Four values from 0 to 1 that drift over time and shift with events.
 
 | Trigger | Reaction |
 | --- | --- |
-| Click | Squash, squeak, sometimes a hop. 4 pokes within 3 s makes it grumpy, 7 makes it sit down and cry with its back turned. Poking a sleeping Puff earns a rude awakening |
+| Click | Squash, squeak, sometimes a hop. 4 pokes within 3 s makes it grumpy, 7 makes it sit down and cry with its back turned. Poking a sleeping buddy earns a rude awakening |
 | Rub without clicking | Purr, hearts, blush |
 | Press and drag | Dangles, legs kick. Release over 1000 px/s is a toss |
 | Very fast cursor nearby | Startled leap away |
-| Focus or typing in a field within 150 px, or on the field Puff is sitting on | Panicked escape leap. Typing is never blocked |
+| Focus or typing in a field within 150 px, or on the field the buddy is sitting on | Panicked escape leap. Typing is never blocked |
 | Its platform moves (scroll) | Wobbles. A jump of more than 24 px in one frame may knock it off |
 | Hard landing (not tumbling) | 35% chance of a happy belly flop |
 | Landing after a tumble | 55% upside down with leg flailing, then flips back angry. Otherwise dazed |
@@ -146,7 +128,7 @@ Words are classified locally into affinities: nature, food, music, technology, w
 
 | Affinity | Reaction |
 | --- | --- |
-| Nature, food | Delighted hop, hearts (Puff's favorites) |
+| Nature, food | Delighted hop, hearts |
 | Music | Starts dancing |
 | Technology | Curious bleeps |
 | Weather | Thunder and storms scare it. Gentle weather is fine |
@@ -166,5 +148,5 @@ Poke, purring pet, picked up, big toss, typing escape, shaken off by scrolling, 
 2. Can a buddy ever change its element after Stage IV (re-evolve, or a rare stone), or is it permanent?
 3. Should the element also change behavior (Fire forms more energetic, Shadow forms more nocturnal), not just looks?
 4. How long should real Stage IV and V take: days, or weeks?
-5. Should Puff ever leave the viewport on its own (walk off screen and come back)?
+5. Should a buddy ever leave the viewport on its own (walk off screen and come back)?
 6. How often may it make noise unprompted before it feels like too much?

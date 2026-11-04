@@ -1,15 +1,16 @@
 /**
- * Procedural plush-toy renderer (Canvas 2D). Reads CreatureState and effects
- * only; it has no game logic. Layer order, back to front:
- * shadow, tail, back foot soles, ears, fur fringe, body, felt texture,
- * surface fuzz, belly patch, tag, face, arms, front tail (curl).
+ * Squishy vinyl renderer (Canvas 2D). Reads CreatureState and effects only.
+ * Each species body is drawn in design units (see core/creature/species.ts)
+ * and scaled so its physics radius matches; faces, arms and feet are shared
+ * and anchored per species.
  */
 import type { Effect } from '../core/animation/effects';
 import { lookTarget } from '../core/animation/rig';
 import type { CreatureState, Pose } from '../core/creature/state';
 import type { WorldSnapshot } from '../core/world';
-import { bodyPath, drawBellyMarking, drawBodyMarkings, drawEars, drawFlourishBack, drawFlourishFront, drawFringe, drawHeadExtra, drawTail, drawTendrils, type PartAssets, type Tuft } from './parts';
+import { BODIES } from './bodies';
 import { drawAura, drawCrest, drawMantle, drawMarks, drawParticles } from './elementFx';
+import { dark, ell as vEll, light } from './vinyl';
 
 export interface Theme {
   ink: string;
@@ -17,27 +18,20 @@ export interface Theme {
   accent: string;
 }
 
-interface Fuzz {
-  x: number;
-  y: number;
-  a: number;
-  l: number;
-  light: boolean;
-}
-
 const TAU = Math.PI * 2;
 const POSES: Pose[] = ['stand', 'sit', 'curl', 'flop', 'peek', 'hug'];
+/** Design units per physics radius. */
+const DESIGN_R = 52;
+const GROUND = 80;
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
-  private outer: Tuft[] = [];
-  private inner: Tuft[] = [];
-  private bumps: PartAssets['bumps'] = [];
-  private fuzz: Fuzz[] = [];
-  private felt: CanvasPattern | null = null;
   private dpr = 1;
   /** Render-only smoothing so pose changes ease instead of snapping. */
   private blend: Record<Pose, number> = { stand: 1, sit: 0, curl: 0, flop: 0, peek: 0, hug: 0 };
+  /** Pixels per design unit for the creature being drawn. */
+  private unit = 1;
+  private mouthDy = 0.27;
   width = 0;
   height = 0;
 
@@ -45,36 +39,6 @@ export class CanvasRenderer {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D is not available');
     this.ctx = ctx;
-    const rnd = mulberry(7);
-    for (let i = 0; i < 40; i++) this.outer.push({ a: (i / 40) * TAU + (rnd() - 0.5) * 0.05, len: 3.5 + rnd() * 3.5, w: 0.19 + rnd() * 0.05, p: rnd() * TAU });
-    for (let i = 0; i < 34; i++) this.inner.push({ a: (i / 34) * TAU + 0.09 + (rnd() - 0.5) * 0.05, len: 2 + rnd() * 2.5, w: 0.2 + rnd() * 0.05, p: rnd() * TAU });
-    for (let i = 0; i < 15; i++) this.bumps.push({ a: (i / 15) * TAU + (rnd() - 0.5) * 0.12, r: rnd(), d: rnd() });
-    for (let i = 0; i < 34; i++) {
-      const r = Math.sqrt(rnd()) * 0.82;
-      const a = rnd() * TAU;
-      this.fuzz.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, a: rnd() * TAU, l: 0.05 + rnd() * 0.06, light: rnd() < 0.55 });
-    }
-    this.felt = this.makeFelt(rnd);
-  }
-
-  private makeFelt(rnd: () => number): CanvasPattern | null {
-    if (typeof document === 'undefined') return null;
-    const n = document.createElement('canvas');
-    n.width = n.height = 64;
-    const g = n.getContext('2d');
-    if (!g) return null;
-    for (let i = 0; i < 900; i++) {
-      const v = rnd();
-      g.fillStyle = v < 0.5 ? `rgba(255,255,255,${0.25 + rnd() * 0.3})` : `rgba(90,20,50,${0.12 + rnd() * 0.18})`;
-      const x = rnd() * 64;
-      const y = rnd() * 64;
-      g.save();
-      g.translate(x, y);
-      g.rotate(rnd() * TAU);
-      g.fillRect(-1.2, -0.35, 2.4, 0.7);
-      g.restore();
-    }
-    return this.ctx.createPattern(n, 'repeat');
   }
 
   resize(width: number, height: number, dpr: number): void {
@@ -96,18 +60,17 @@ export class CanvasRenderer {
     this.drawEffects(effects, theme);
   }
 
-  // ---------- helpers ----------
   private ell(x: number, y: number, rx: number, ry: number, rot = 0): void {
     this.ctx.beginPath();
     this.ctx.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), rot, 0, TAU);
   }
 
-  /** A soft, rounded limb: capsule from a to b. */
+  /** A soft vinyl limb: capsule from a to b with an edge and a shine. */
   private limb(ax: number, ay: number, bx: number, by: number, w: number, fill: string, edge: string): void {
     const ctx = this.ctx;
     ctx.lineCap = 'round';
     ctx.strokeStyle = edge;
-    ctx.lineWidth = w + 2.4;
+    ctx.lineWidth = w + 2;
     ctx.beginPath();
     ctx.moveTo(ax, ay);
     ctx.lineTo(bx, by);
@@ -115,69 +78,38 @@ export class CanvasRenderer {
     ctx.strokeStyle = fill;
     ctx.lineWidth = w;
     ctx.stroke();
-  }
-
-  private sole(x: number, y: number, s: number, rot: number, c: CreatureState): void {
-    const ctx = this.ctx;
-    const R = c.species.radius;
-    const pal = c.species.palette;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot);
-    ctx.fillStyle = pal.fur;
-    this.ell(0, 0, R * 0.25 * s, R * 0.21 * s);
-    ctx.fill();
-    ctx.strokeStyle = pal.furDark;
-    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = 'rgba(255,255,255,.4)';
+    ctx.lineWidth = w * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(ax - w * 0.15, ay - w * 0.18);
+    ctx.lineTo(bx - w * 0.15, by - w * 0.18);
     ctx.stroke();
-    ctx.fillStyle = pal.pad;
-    this.ell(0, R * 0.04 * s, R * 0.12 * s, R * 0.09 * s);
-    ctx.fill();
-    for (let i = -1; i <= 1; i++) {
-      this.ell(i * R * 0.1 * s, -R * 0.1 * s + Math.abs(i) * R * 0.03 * s, R * 0.045 * s, R * 0.04 * s);
-      ctx.fill();
-    }
-    ctx.restore();
   }
 
-  // ---------- creature ----------
   private drawCreature(c: CreatureState, world: WorldSnapshot, t: number, activity: string): void {
     const ctx = this.ctx;
-    const R = c.species.radius;
-    const pal = c.species.palette;
+    const sp = c.species;
+    const d = sp.design;
+    const A = sp.anatomy;
+    const R = sp.radius;
     const rig = c.rig;
     const b = this.blend;
     const airborne = !c.grounded && !c.hang;
-    const f = c.facing;
-
-    const d = c.species.design;
+    const body = BODIES[d.body];
+    this.unit = R / DESIGN_R;
     const hover = d.floats && !c.held && !c.hang && !c.asleep ? 6 + Math.sin(t * 2.2) * 3 : 0;
 
-    // elemental aura sits behind everything
     drawAura(ctx, c, c.x, c.y - hover);
-
-    // contact shadow (fainter and smaller while hovering)
     if (c.grounded && !c.hang) {
       ctx.fillStyle = `rgba(40,10,25,${0.16 - hover * 0.008})`;
-      this.ell(c.x, c.y + R + 3, R * (0.85 + b.flop * 0.35) * c.sx * (1 - hover * 0.025), 5.5);
+      this.ell(c.x, c.y + R + 3, R * (0.95 + b.flop * 0.35) * c.sx * (1 - hover * 0.025), 5.5);
       ctx.fill();
     }
 
-    // pose squash, breathing
+    // pose squash and breathing
     const br = Math.sin(rig.breath);
-    const poseSx = 1 + b.flop * 0.26 + b.sit * 0.04 + b.curl * 0.06;
-    const poseSy = 1 - b.flop * 0.32 - b.sit * 0.06 - b.curl * 0.04;
-    const sx = c.sx * poseSx * (1 - br * 0.012) * d.bodyW;
-    const sy = c.sy * poseSy * (1 + br * 0.022) * d.bodyH;
-
-    if (d.floats && !c.asleep && !d.element) {
-      const glow = ctx.createRadialGradient(c.x, c.y - hover, R * 0.6, c.x, c.y - hover, R * 1.9);
-      glow.addColorStop(0, 'rgba(255,248,190,.35)');
-      glow.addColorStop(1, 'rgba(255,248,190,0)');
-      ctx.fillStyle = glow;
-      this.ell(c.x, c.y - hover, R * 1.9, R * 1.9);
-      ctx.fill();
-    }
+    let sx = c.sx * (1 + b.flop * 0.26 + b.sit * 0.04 + b.curl * 0.08) * (1 - br * 0.012);
+    let sy = c.sy * (1 - b.flop * 0.32 - b.sit * 0.06 - b.curl * 0.1) * (1 + br * 0.022);
 
     // gait: how each species carries itself
     let gaitRot = 0;
@@ -185,132 +117,63 @@ export class CanvasRenderer {
     const lp = c.legPhase;
     if (c.walking) {
       if (d.gait === 'waddle') gaitRot = Math.sin(lp) * 0.1;
-      else if (d.gait === 'scamper') gaitY = -Math.abs(Math.sin(lp)) * R * 0.14;
+      else if (d.gait === 'scamper') gaitY = -Math.abs(Math.sin(lp)) * R * 0.16;
       else if (d.gait === 'stride') gaitY = -Math.abs(Math.sin(lp)) * R * 0.05;
       else if (d.gait === 'wobble') gaitRot = Math.sin(lp * 0.5) * 0.18;
-      else if (d.gait === 'float') gaitRot = Math.sin(lp * 0.4) * 0.05;
+      else if (d.gait === 'jiggle') {
+        sx *= 1 + Math.sin(lp * 1.2) * 0.07;
+        sy *= 1 - Math.sin(lp * 1.2) * 0.07;
+      }
     }
     if (d.gait === 'wobble' && c.grounded && !c.asleep) gaitRot += Math.sin(t * 4.3) * 0.04;
+    if (d.gait === 'jiggle' && !c.asleep) {
+      sx *= 1 + Math.sin(t * 5) * 0.012;
+      sy *= 1 - Math.sin(t * 5) * 0.012;
+    }
 
     ctx.save();
     ctx.translate(c.x, c.y - hover + gaitY);
     ctx.rotate(c.rot + rig.lean + gaitRot);
     ctx.translate(0, R);
-    ctx.scale(sx, sy);
-    ctx.translate(0, -R);
+    ctx.scale(sx * this.unit, sy * this.unit);
+    ctx.translate(0, -GROUND);
 
-    // --- tail (behind unless curled) ---
-    const tailBack = b.curl < 0.5;
-    if (tailBack) drawTail(ctx, c, t, false);
-
-    // --- Stage V mantle and wings sit behind the body ---
-    drawMantle(ctx, c, t);
-    drawFlourishBack(ctx, c, t);
-
-    // --- feet behind body when flopping (kicking soles in the air) ---
-    if (b.flop > 0.3 && !c.asleep) {
-      for (const side of [-1, 1]) {
-        const k = Math.sin(c.legPhase + side * 1.7) * 0.5;
-        this.sole(-f * R * (0.55 + side * 0.16), -R * 0.55 + k * R * 0.25, 0.95, -f * (0.8 + k), c);
-      }
-    }
-
-    // --- ears ---
-    drawEars(ctx, c, t);
-
-    // raised arms (hanging, hugging) go behind the head
-    const armsBehind = !!c.hang || c.pose === 'hug';
-    if (armsBehind) this.drawArms(c, airborne, t, activity);
-
-    // --- fur fringe (two layers of clumps) ---
-    const fluff = c.fluff;
-    drawFringe(ctx, c, { outer: this.outer, inner: this.inner, bumps: this.bumps }, t);
-
-    // --- body ---
-    const g = ctx.createRadialGradient(-R * 0.38, -R * 0.48, R * 0.1, 0, 0, R * 1.05);
-    g.addColorStop(0, pal.furLight);
-    g.addColorStop(0.55, pal.fur);
-    g.addColorStop(1, pal.furDark);
-    ctx.fillStyle = g;
-    bodyPath(ctx, d, R);
-    ctx.fill();
-
-    // felt texture
-    if (this.felt) {
+    const atCore = (fn: () => void) => {
       ctx.save();
-      bodyPath(ctx, d, R);
-      ctx.clip();
-      ctx.globalAlpha = 0.28;
-      ctx.fillStyle = this.felt;
-      ctx.fillRect(-R, -R, R * 2, R * 2);
+      ctx.translate(0, A.core.cy);
+      fn();
       ctx.restore();
-    }
-    // surface fuzz strokes
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 1.3;
-    for (const z of this.fuzz) {
-      ctx.strokeStyle = z.light ? 'rgba(255,255,250,.5)' : 'rgba(60,30,50,.2)';
-      const a = z.a + Math.sin(t * 1.6 + z.x * 9) * 0.25 * (1 + fluff * 3);
-      const x = z.x * R;
-      const y = z.y * R;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + Math.cos(a) * z.l * R, y + Math.sin(a) * z.l * R);
-      ctx.stroke();
-    }
-    // rim light, upper left
-    ctx.strokeStyle = 'rgba(255,255,255,.45)';
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.arc(0, 0, R - 2.5, Math.PI * 1.08, Math.PI * 1.52);
-    ctx.stroke();
-    drawBodyMarkings(ctx, c, t);
-    drawMarks(ctx, c, t);
+    };
+    atCore(() => drawMantle(ctx, c, t, A.core.r));
+    this.drawFeet(c, airborne, t);
+    const armsFront = c.arm === 'chin' || c.pose === 'hug' || c.held || !!c.hang || activity === 'Dancing';
+    body.back(ctx, c, t);
+    if (!armsFront) atCore(() => this.drawArms(c, airborne, t, activity, A.core.r));
+    body.body(ctx, c, t);
+    ctx.save();
+    body.path(ctx, c, t);
+    ctx.clip();
+    atCore(() => drawMarks(ctx, c, t, A.core.r));
+    ctx.restore();
 
-    // belly patch with stitches
-    const bx = rig.faceX * R * 0.05;
-    const bg = ctx.createRadialGradient(bx - R * 0.1, R * 0.22, R * 0.05, bx, R * 0.38, R * 0.62);
-    bg.addColorStop(0, '#ffffff');
-    bg.addColorStop(1, pal.belly);
-    ctx.fillStyle = bg;
-    this.ell(bx, R * 0.4, R * 0.56, R * 0.42);
-    ctx.fill();
-    ctx.setLineDash([2.6, 2.6]);
-    ctx.strokeStyle = pal.stitch;
-    ctx.lineWidth = 1.2;
-    this.ell(bx, R * 0.4, R * 0.5, R * 0.36);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    drawBellyMarking(ctx, c, bx);
+    ctx.save();
+    ctx.translate(A.face.x, A.face.y);
+    this.mouthDy = A.face.mouthDy;
+    this.drawFace(c, world, t, activity, A.face.size);
+    ctx.restore();
 
-    // fabric tag from the side seam
-    if (b.stand + b.sit > 0.6 && !c.held) this.drawTag(c, -f, t);
+    body.front(ctx, c, t);
+    ctx.save();
+    ctx.translate(0, A.top + 0.9 * 40);
+    drawCrest(ctx, c, t, 40);
+    ctx.restore();
+    if (armsFront) atCore(() => this.drawArms(c, airborne, t, activity, A.core.r));
 
-    // --- horns, sprout, antenna ---
-    drawHeadExtra(ctx, c, t);
-    drawCrest(ctx, c, t);
-    drawFlourishFront(ctx, c, t);
-
-    // --- face ---
-    this.drawFace(c, world, t, activity);
-
-    // --- feet (front) ---
-    if (d.feet === 'tendrils') drawTendrils(ctx, c, t);
-    else this.drawFeet(c, airborne, t);
-
-    // --- arms ---
-    if (!armsBehind) this.drawArms(c, airborne, t, activity);
-
-    // --- tail wrapped in front when curled ---
-    if (!tailBack) drawTail(ctx, c, t, true);
-
-    // evolution glow washes the body white at the peak
     if (c.evolveGlow > 0) {
       ctx.fillStyle = `rgba(255,255,245,${0.85 * c.evolveGlow})`;
-      bodyPath(ctx, d, R * 1.08);
+      body.path(ctx, c, t);
       ctx.fill();
     }
-
     ctx.restore();
 
     drawParticles(ctx, c, c.x, c.y - hover, t);
@@ -324,83 +187,60 @@ export class CanvasRenderer {
     }
   }
 
-
-
-
-  private drawTag(c: CreatureState, side: number, t: number): void {
-    const ctx = this.ctx;
-    const R = c.species.radius;
-    const pal = c.species.palette;
-    ctx.save();
-    ctx.translate(side * R * 0.93, R * 0.32);
-    ctx.rotate(side * (0.25 + Math.sin(t * 2.3) * 0.08 + c.rig.armLag * 0.4));
-    ctx.fillStyle = pal.tag;
-    ctx.strokeStyle = 'rgba(120,70,60,.35)';
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.rect(side > 0 ? 0 : -9, -4, 9, 8);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = pal.stitch;
-    ctx.fillRect(side > 0 ? 2.5 : -6.5, -1.2, 4, 0.9);
-    ctx.fillRect(side > 0 ? 2.5 : -6.5, 0.8, 3, 0.9);
-    ctx.restore();
-  }
-
+  /** Nub feet in design units. Pads show when a sole turns toward you. */
   private drawFeet(c: CreatureState, airborne: boolean, t: number): void {
-    const R = c.species.radius;
+    const F = c.species.anatomy.feet;
+    if (!F.w) return;
+    const ctx = this.ctx;
     const pal = c.species.palette;
     const b = this.blend;
-    const ctx = this.ctx;
-    if (c.asleep || b.curl > 0.5 || b.flop > 0.5) return;
-    const f = c.facing;
-    if (b.sit > 0.5) {
-      // sitting: soles toward the viewer, feet poking forward
-      this.sole(-R * 0.36 + f * R * 0.06, R * 0.9, 1.05, -0.25, c);
-      this.sole(R * 0.36 + f * R * 0.06, R * 0.9, 1.05, 0.25, c);
-      return;
-    }
+    const footY = GROUND - F.h * 0.4;
     for (const side of [-1, 1]) {
-      let fx = side * R * 0.38;
-      let fy = R * 0.94;
-      let lift = 0;
-      let showSole = false;
-      if (c.walking) {
+      let x = side * F.dx;
+      let y = footY;
+      let rot = 0;
+      let showPad = false;
+      if (b.flop > 0.5) {
+        // kicking in the air behind
+        const k = Math.sin(c.legPhase + side * 1.7);
+        x = -c.facing * (F.dx * 1.6 + side * 6);
+        y = GROUND - 46 + k * 6;
+        rot = -c.facing * 0.9;
+        showPad = true;
+      } else if (c.asleep || b.curl > 0.5) {
+        x = side * F.dx * 0.8;
+        y = footY + 2;
+      } else if (b.sit > 0.5) {
+        x = side * F.dx * 1.15;
+        rot = side * 0.35;
+        showPad = true;
+      } else if (c.walking) {
         const p = c.legPhase + (side > 0 ? Math.PI : 0);
-        fx += Math.sin(p) * R * 0.22;
-        lift = Math.max(0, Math.cos(p)) * R * 0.17;
-        showSole = lift > R * 0.1;
+        x += Math.sin(p) * F.dx * 0.5;
+        y -= Math.max(0, Math.cos(p)) * F.h * 0.9;
+        showPad = Math.cos(p) > 0.4;
       } else if (c.held || airborne || c.hang) {
-        fy = R * 1.08 + (c.held ? 5 : 2);
-        fx += Math.sin(t * 13 + side * 2) * 3.5;
-        showSole = true;
+        y = footY + 8;
+        x += Math.sin(t * 13 + side * 2) * 3;
+        showPad = true;
       }
-      if (c.flipT !== null || c.hang) {
-        fx += Math.sin(c.legPhase + side * 2) * 6;
-        showSole = true;
+      if (c.flipT !== null) {
+        x += Math.sin(c.legPhase + side * 2) * 5;
+        showPad = true;
       }
-      if (showSole) this.sole(fx, fy - lift, 0.85, side * 0.2, c);
-      else {
-        const g = ctx.createLinearGradient(0, fy - R * 0.16, 0, fy + R * 0.16);
-        g.addColorStop(0, pal.fur);
-        g.addColorStop(1, pal.furDark);
-        ctx.fillStyle = g;
-        this.ell(fx + f * 2, fy - lift, R * 0.26, R * 0.16);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(120,40,70,.35)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(fx + f * 2 - R * 0.05, fy - lift - R * 0.02);
-        ctx.lineTo(fx + f * 2 - R * 0.05, fy - lift + R * 0.12);
-        ctx.moveTo(fx + f * 2 + R * 0.07, fy - lift - R * 0.02);
-        ctx.lineTo(fx + f * 2 + R * 0.07, fy - lift + R * 0.12);
-        ctx.stroke();
-      }
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      vEll(ctx, 0, 0, F.w, F.h, pal.limb);
+      if (showPad) {
+        vEll(ctx, 0, 1, F.w * 0.45, F.h * 0.45, pal.pad, { flat: true, rim: false });
+        for (const k of [-1, 0, 1]) vEll(ctx, k * F.w * 0.42, -F.h * 0.5, F.w * 0.16, F.h * 0.2, pal.pad, { flat: true, rim: false });
+      } else for (const k of [-1, 0, 1]) vEll(ctx, k * F.w * 0.4, F.h * 0.35, F.w * 0.17, F.h * 0.22, pal.pad, { flat: true, rim: false });
+      ctx.restore();
     }
   }
 
-  private drawArms(c: CreatureState, airborne: boolean, t: number, activity: string): void {
-    const R = c.species.radius;
+  private drawArms(c: CreatureState, airborne: boolean, t: number, activity: string, R: number): void {
     const pal = c.species.palette;
     const b = this.blend;
     const lag = c.rig.armLag;
@@ -435,7 +275,7 @@ export class CanvasRenderer {
         const dx = c.reach.x - c.x;
         const dy = c.reach.y - c.y;
         const d = Math.hypot(dx, dy) || 1;
-        const L = Math.min(d, R * 1.2);
+        const L = Math.min(d / this.unit, R * 1.2);
         sx = side * R * 0.62;
         sy = -R * 0.1;
         hx = side * R * 0.42 + (dx / d) * L * 0.8;
@@ -456,19 +296,14 @@ export class CanvasRenderer {
         hx = side * R * 0.66;
         hy = R * 0.74;
       }
-      this.limb(sx, sy, hx, hy, R * 0.26, pal.fur, pal.furDark);
-      this.ctx.fillStyle = pal.furLight;
-      this.ell(hx, hy, R * 0.13, R * 0.12);
-      this.ctx.fill();
-      this.ctx.fillStyle = pal.pad;
-      this.ell(hx + side * 1, hy + R * 0.03, R * 0.05, R * 0.04);
-      this.ctx.fill();
+      const w = Math.min(R * 0.26, 11);
+      this.limb(sx, sy, hx, hy, w, pal.limb, dark(pal.limb, 0.3));
+      vEll(this.ctx, hx, hy, w * 0.62, w * 0.58, pal.limb);
     }
   }
 
-  private drawFace(c: CreatureState, world: WorldSnapshot, t: number, activity: string): void {
+  private drawFace(c: CreatureState, world: WorldSnapshot, t: number, activity: string, R: number): void {
     const ctx = this.ctx;
-    const R = c.species.radius;
     const pal = c.species.palette;
     const e = c.expr;
     const rig = c.rig;
@@ -518,37 +353,31 @@ export class CanvasRenderer {
       ctx.translate(ex, ey);
       ctx.scale(K, K);
       ctx.translate(-ex, -ey);
-      this.drawEye(c, side, ex, lx, ly, t, hungry);
+      this.drawEye(c, side, ex, lx, ly, t, hungry, R);
       ctx.restore();
     }
 
     // brows
-    this.drawBrows(c, t, two);
+    this.drawBrows(c, t, two, R);
 
-    // freckles
-    if (c.species.design.marking === 'freckles') {
-      ctx.fillStyle = 'rgba(200,120,100,.55)';
-      for (const side of [-1, 1])
-        for (const [fx, fy] of [[0.5, 0.06], [0.6, 0.02], [0.57, 0.11]] as const) {
-          this.ell(side * R * fx, R * fy, 1.1, 1.1);
-          ctx.fill();
-        }
-    }
 
     // nose
+    if (c.species.design.nose) {
     ctx.fillStyle = pal.nose;
-    ctx.beginPath();
-    const ny = R * 0.13;
-    ctx.moveTo(-R * 0.07, ny - R * 0.035);
-    ctx.quadraticCurveTo(0, ny - R * 0.07, R * 0.07, ny - R * 0.035);
-    ctx.quadraticCurveTo(R * 0.05, ny + R * 0.04, 0, ny + R * 0.055);
-    ctx.quadraticCurveTo(-R * 0.05, ny + R * 0.04, -R * 0.07, ny - R * 0.035);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.6)';
-    this.ell(-R * 0.025, ny - R * 0.025, R * 0.022, R * 0.012);
-    ctx.fill();
+      ctx.beginPath();
+      const ny = R * 0.13;
+      ctx.moveTo(-R * 0.07, ny - R * 0.035);
+      ctx.quadraticCurveTo(0, ny - R * 0.07, R * 0.07, ny - R * 0.035);
+      ctx.quadraticCurveTo(R * 0.05, ny + R * 0.04, 0, ny + R * 0.055);
+      ctx.quadraticCurveTo(-R * 0.05, ny + R * 0.04, -R * 0.07, ny - R * 0.035);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.6)';
+      this.ell(-R * 0.025, ny - R * 0.025, R * 0.022, R * 0.012);
+      ctx.fill();
 
-    this.drawMouth(c, t, hungry, blep);
+}
+
+    this.drawMouth(c, t, hungry, blep, R);
 
     // tears and sweat
     if (c.tears > 0) {
@@ -579,9 +408,8 @@ export class CanvasRenderer {
     ctx.restore();
   }
 
-  private drawEye(c: CreatureState, side: number, x: number, lx: number, ly: number, t: number, hungry: boolean): void {
+  private drawEye(c: CreatureState, side: number, x: number, lx: number, ly: number, t: number, hungry: boolean, R: number): void {
     const ctx = this.ctx;
-    const R = c.species.radius;
     const pal = c.species.palette;
     const e = c.expr;
     const y = -R * 0.12;
@@ -648,25 +476,49 @@ export class CanvasRenderer {
     const ry = R * 0.245 * s;
     const ex = x + jx;
 
-    // bead eye: dark iris with warm ring
-    const g = ctx.createRadialGradient(ex + lx * rx * 0.3, y + ly * ry * 0.3 + ry * 0.2, 1, ex, y, ry * 1.05);
-    g.addColorStop(0, pal.iris);
-    g.addColorStop(0.7, pal.pupil);
-    g.addColorStop(1, pal.pupil);
-    ctx.fillStyle = g;
-    this.ell(ex, y, rx, ry);
-    ctx.fill();
-    // pupil drifts with gaze
-    ctx.fillStyle = '#000';
-    this.ell(ex + lx * rx * 0.32, y + ly * ry * 0.28, rx * 0.5 * ps, ry * 0.5 * ps);
-    ctx.fill();
-    // glossy highlights stay put, which is what makes beads read as glass
-    ctx.fillStyle = 'rgba(255,255,255,.95)';
-    this.ell(ex - rx * 0.32, y - ry * 0.38, rx * 0.34, ry * 0.26, -0.5);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.7)';
-    this.ell(ex + rx * 0.35, y + ry * 0.35, rx * 0.14, ry * 0.12);
-    ctx.fill();
+    if (c.species.design.sclera) {
+      // cyclops eye: white, colored iris that tracks, dark pupil
+      ctx.fillStyle = '#ffffff';
+      this.ell(ex, y, rx, ry);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(58,42,48,.55)';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      const ir = rx * 0.62;
+      const ix = ex + lx * rx * 0.3;
+      const iy = y + ly * ry * 0.25;
+      const ig = ctx.createRadialGradient(ix, iy + ir * 0.4, 1, ix, iy, ir);
+      ig.addColorStop(0, light(pal.iris, 0.45));
+      ig.addColorStop(1, dark(pal.iris, 0.3));
+      ctx.fillStyle = ig;
+      this.ell(ix, iy, ir, ir);
+      ctx.fill();
+      ctx.fillStyle = pal.pupil;
+      this.ell(ix, iy, ir * 0.52 * ps, ir * 0.52 * ps);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.95)';
+      this.ell(ix - ir * 0.32, iy - ir * 0.36, ir * 0.36, ir * 0.28, -0.5);
+      ctx.fill();
+      this.ell(ix + ir * 0.5, iy + ir * 0.5, ir * 0.13, ir * 0.13);
+      ctx.fill();
+    } else {
+      // vinyl eye: deep top fading to a colored glow at the bottom, big fixed shine
+      const g = ctx.createLinearGradient(ex, y - ry, ex, y + ry);
+      g.addColorStop(0, pal.pupil);
+      g.addColorStop(0.62, pal.iris);
+      g.addColorStop(1, light(pal.iris, 0.5));
+      ctx.fillStyle = g;
+      this.ell(ex, y, rx, ry);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(10,6,12,.55)';
+      this.ell(ex + lx * rx * 0.3, y + ly * ry * 0.26 - ry * 0.05, rx * 0.5 * ps, ry * 0.48 * ps);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      this.ell(ex - rx * 0.28, y - ry * 0.42, rx * 0.4, ry * 0.3, -0.4);
+      ctx.fill();
+      this.ell(ex + rx * 0.34, y + ry * 0.38, rx * 0.16, ry * 0.13);
+      ctx.fill();
+    }
     if (c.tears > 0) {
       ctx.fillStyle = 'rgba(160,210,255,.45)';
       this.ell(ex, y + ry * 0.55, rx * 0.8, ry * 0.3);
@@ -692,7 +544,7 @@ export class CanvasRenderer {
       ctx.clip();
       const top = y - ry - 1;
       const edge = top + lid * (ry * 2 + 2);
-      ctx.fillStyle = pal.fur;
+      ctx.fillStyle = pal.lid;
       ctx.beginPath();
       ctx.moveTo(ex - rx - 2, top);
       ctx.lineTo(ex + rx + 2, top);
@@ -710,9 +562,8 @@ export class CanvasRenderer {
     }
   }
 
-  private drawBrows(c: CreatureState, t: number, two: boolean): void {
+  private drawBrows(c: CreatureState, t: number, two: boolean, R: number): void {
     const ctx = this.ctx;
-    const R = c.species.radius;
     const pal = c.species.palette;
     const e = c.expr;
     if (e === 'sleep' || c.pose === 'curl') return;
@@ -760,12 +611,11 @@ export class CanvasRenderer {
     }
   }
 
-  private drawMouth(c: CreatureState, t: number, hungry: boolean, blep: boolean): void {
+  private drawMouth(c: CreatureState, t: number, hungry: boolean, blep: boolean, R: number): void {
     const ctx = this.ctx;
-    const R = c.species.radius;
     const pal = c.species.palette;
     const e = c.expr;
-    const my = R * 0.27;
+    const my = R * this.mouthDy;
     ctx.strokeStyle = pal.line;
     ctx.fillStyle = pal.line;
     ctx.lineWidth = 2;
@@ -777,18 +627,20 @@ export class CanvasRenderer {
       ctx.arc(R * 0.07, my - R * 0.02, R * 0.07, Math.PI * 0.1, Math.PI * 0.9);
       ctx.stroke();
     };
-    const fang = () => {
+    const teeth = () => {
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = pal.line;
       ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      const fx = c.facing * R * 0.1;
-      ctx.moveTo(fx - R * 0.035, my + R * 0.015);
-      ctx.lineTo(fx + R * 0.035, my + R * 0.015);
-      ctx.lineTo(fx, my + R * 0.11);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      for (const s of [-1, 1]) {
+        const fx = s * R * 0.08;
+        ctx.beginPath();
+        ctx.moveTo(fx - R * 0.04, my + R * 0.03);
+        ctx.lineTo(fx + R * 0.04, my + R * 0.03);
+        ctx.lineTo(fx, my + R * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
       ctx.strokeStyle = pal.line;
       ctx.lineWidth = 2;
     };
@@ -884,7 +736,7 @@ export class CanvasRenderer {
       return;
     }
     catMouth();
-    if (c.species.design.fang) fang();
+    if (c.species.design.teeth) teeth();
     if (blep) tongue(R * 0.05, R * 0.06, my + R * 0.07);
   }
 
@@ -918,13 +770,3 @@ export class CanvasRenderer {
   }
 }
 
-function mulberry(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}

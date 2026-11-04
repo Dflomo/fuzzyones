@@ -1,7 +1,7 @@
 /** Playground entry: wires the core engine to the browser host, renderer, audio and inspector. */
 import './ui/playground.css';
 import { Buddy } from './core/buddy';
-import { PUFF, SPECIES, speciesById } from './core/creature/species';
+import { DEFAULT_SPECIES, SPECIES, speciesById } from './core/creature/species';
 import { classifyElement, ELEMENT_STYLE } from './core/evolution/elements';
 import { Progression } from './core/evolution/progression';
 import { BrowserHost } from './browser/host';
@@ -14,7 +14,7 @@ const save = loadSave();
 const audio = new WebAudioPort();
 const buddy = new Buddy({ audio, discovered: save.discovered, spawnX: Math.min(innerWidth * 0.3, 240) });
 // Growth owns the base species and current form; it resolves the body the buddy wears.
-const growth = new Progression(buddy, speciesById(save.species ?? '') ?? PUFF, save.growth);
+const growth = new Progression(buddy, speciesById(save.species ?? '') ?? DEFAULT_SPECIES, save.growth);
 const persist = () => {
   save.growth = growth.state;
   save.species = growth.base.id;

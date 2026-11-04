@@ -77,7 +77,7 @@ These are hard requirements from the vision:
 
 ## Rendering
 
-Canvas 2D, procedural, at device pixel ratio up to 2x. The plush body is drawn from a radius and palette (`Species`), so new species or evolution forms start as parameter changes. Secondary motion (ears, tail, arm lag, lean, breathing, face parallax) is simulated in `core/animation/rig.ts` so it stays deterministic and testable; the renderer only adds visual easing between poses. `/sheet.html` renders every pose and expression for art review. See ADR 0002.
+Canvas 2D, procedural, at device pixel ratio up to 2x, in a squishy vinyl style (`rendering/vinyl.ts`). Each species body (`rendering/bodies.ts`) is drawn in design units and scaled to its physics radius; faces, arms, feet and elemental overlays are shared and anchored per species through `Species.anatomy`, so evolution forms need no per-form art. Secondary motion (ears, tail, arm lag, lean, breathing, face parallax) is simulated in `core/animation/rig.ts` so it stays deterministic and testable; the renderer only adds visual easing between poses. `/sheet.html` renders every pose and expression for art review. See ADR 0002.
 
 ## Known risks
 

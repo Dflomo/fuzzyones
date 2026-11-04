@@ -13,10 +13,11 @@ Concept art for the next version of the five starter species. These are sketches
   - **Oddling**, scraggly yarn ball: brought back from the earlier lineup. Floppy ear, curly antenna, ringed tail
 - **Dropped:** the bunny (all three takes)
 
-## Open
+- **Oddling: wire tangle** (Director, 2026-11-04): springy copper and teal wires, one eye
 
-- Oddling has one eye, two eyes, or is a wire tangle (see round three)
-- Since Bean is the cyclops, should Oddling keep one eye?
+## Status
+
+All five are built into the game in squishy vinyl, with growth stages and elemental forms. See `docs/images/evolutions.png`.
 
 ## Rounds
 

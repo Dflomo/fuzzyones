@@ -3,7 +3,7 @@
  * Keep this serializable-ish so it can later be persisted or sent to a
  * sanctuary process.
  */
-import { PUFF, type Species } from './species';
+import { DEFAULT_SPECIES, type Species } from './species';
 
 export type Expression =
   | 'neutral'
@@ -59,7 +59,7 @@ export interface Mood {
 }
 
 export type { Species } from './species';
-export { PUFF } from './species';
+export { DEFAULT_SPECIES } from './species';
 
 export interface HangState {
   surfaceId: string;
@@ -135,7 +135,7 @@ export interface CreatureState {
   mood: Mood;
 }
 
-export function createCreature(species: Species = PUFF, x = 240, y = -90): CreatureState {
+export function createCreature(species: Species = DEFAULT_SPECIES, x = 240, y = -90): CreatureState {
   return {
     species,
     x, y, vx: 0, vy: 0,

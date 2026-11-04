@@ -5,7 +5,7 @@
  */
 import type { CreatureState } from '../core/creature/state';
 import { ELEMENT_STYLE, type Element } from '../core/evolution/elements';
-import { drawWings, star } from './parts';
+import { star } from './vinyl';
 
 const TAU = Math.PI * 2;
 
@@ -57,11 +57,11 @@ export function drawAura(ctx: CanvasRenderingContext2D, c: CreatureState, x: num
 }
 
 // ------------------------------------------------------------------ mantle (local, behind body, Stage V)
-export function drawMantle(ctx: CanvasRenderingContext2D, c: CreatureState, t: number): void {
+/** R is the creature's core radius in local units; the caller translates to the core center. */
+export function drawMantle(ctx: CanvasRenderingContext2D, c: CreatureState, t: number, R: number): void {
   const d = c.species.design;
   const el = d.element;
   if (!el || d.stage < 5) return;
-  const R = c.species.radius;
   const st = ELEMENT_STYLE[el];
   switch (el) {
     case 'fire':
@@ -109,7 +109,7 @@ export function drawMantle(ctx: CanvasRenderingContext2D, c: CreatureState, t: n
       }
       break;
     case 'air':
-      drawWings(ctx, c, t, 'feather', '#ffffff', st.deep);
+      featherWings(ctx, c, t, R, st.deep);
       break;
     case 'light': {
       ctx.save();
@@ -171,10 +171,10 @@ function crystal(ctx: CanvasRenderingContext2D, x: number, y: number, w: number,
 }
 
 // ------------------------------------------------------------------ crest (local, on the head)
-export function drawCrest(ctx: CanvasRenderingContext2D, c: CreatureState, t: number): void {
+/** The caller translates so that -0.9 R is the top of the head. */
+export function drawCrest(ctx: CanvasRenderingContext2D, c: CreatureState, t: number, R: number): void {
   const el = c.species.design.element;
   if (!el) return;
-  const R = c.species.radius;
   const L = level(c);
   const st = ELEMENT_STYLE[el];
   const fx = c.rig.faceX * R * 0.08;
@@ -263,14 +263,13 @@ export function drawCrest(ctx: CanvasRenderingContext2D, c: CreatureState, t: nu
 }
 
 // ------------------------------------------------------------------ marks (local, on the body)
-export function drawMarks(ctx: CanvasRenderingContext2D, c: CreatureState, t: number): void {
+export function drawMarks(ctx: CanvasRenderingContext2D, c: CreatureState, t: number, R: number): void {
   const d = c.species.design;
-  if (d.element) marks(ctx, c, d.element, t, 1);
-  if (d.secondary) marks(ctx, c, d.secondary, t, 0.8);
+  if (d.element) marks(ctx, c, d.element, t, 1, R);
+  if (d.secondary) marks(ctx, c, d.secondary, t, 0.8, R);
 }
 
-function marks(ctx: CanvasRenderingContext2D, c: CreatureState, el: Element, t: number, k: number): void {
-  const R = c.species.radius;
+function marks(ctx: CanvasRenderingContext2D, _c: CreatureState, el: Element, t: number, k: number, R: number): void {
   const st = ELEMENT_STYLE[el];
   const sides = [-1, 1];
   ctx.lineCap = 'round';
@@ -424,5 +423,31 @@ function particles(ctx: CanvasRenderingContext2D, c: CreatureState, el: Element,
         break;
       }
     }
+  }
+}
+
+function featherWings(ctx: CanvasRenderingContext2D, c: CreatureState, t: number, R: number, edge: string): void {
+  const airborne = !c.grounded && !c.hang;
+  const flap = Math.sin(t * (airborne ? 26 : 3)) * (airborne ? 0.55 : 0.12);
+  for (const side of [-1, 1]) {
+    ctx.save();
+    ctx.translate(side * R * 0.72, -R * 0.25);
+    ctx.rotate(side * (-0.35 + flap));
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.4;
+    const L = R;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(side * L * 0.4, -L * 0.9, side * L * 1.1, -L * 0.6, side * L * 1.05, -L * 0.1);
+    for (let i = 0; i < 4; i++) {
+      const k = i / 4;
+      ctx.quadraticCurveTo(side * L * (1.0 - k * 0.25), L * (0.05 + k * 0.08), side * L * (0.85 - k * 0.22), L * (0.02 + k * 0.1));
+    }
+    ctx.quadraticCurveTo(side * L * 0.3, L * 0.25, 0, R * 0.15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
   }
 }

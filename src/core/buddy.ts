@@ -14,7 +14,7 @@ import { pushRecent, scoreBehaviors, type ScoredBehavior } from './behavior/sele
 import type { Behavior, BuddyContext, CompanionMode } from './behavior/types';
 import { classifyWord, isBigBite, isStormy, type Affinity } from './creature/affinity';
 import { classifyElement, ELEMENT_STYLE } from './evolution/elements';
-import { createCreature, PUFF, type CreatureState, type Expression, type Mood, type Species } from './creature/state';
+import { createCreature, DEFAULT_SPECIES, type CreatureState, type Expression, type Mood, type Species } from './creature/state';
 import { DISCOVERIES, type DiscoveryKey } from './events/discoveries';
 import { EventBus, type BuddyEventType, type EventPayload } from './events/events';
 import { findLanding, GRAVITY, launch, stepSprings } from './physics/physics';
@@ -67,7 +67,7 @@ export class Buddy implements BuddyContext {
   private pendingEvolve: { next: Species; data: EventPayload } | null = null;
 
   constructor(opts: BuddyOptions = {}) {
-    this.c = createCreature(opts.species ?? PUFF, opts.spawnX ?? 240);
+    this.c = createCreature(opts.species ?? DEFAULT_SPECIES, opts.spawnX ?? 240);
     this.audio = opts.audio ?? silentAudio;
     this.rng = opts.rng ?? createRng();
     this.mode = opts.mode ?? 'dynamic';

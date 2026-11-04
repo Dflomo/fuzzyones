@@ -14,6 +14,6 @@ Each behavior exposes `score(ctx)`. When the current activity ends, the engine s
 ## Consequences
 
 - Behaviors are small, independent and easy to add.
-- Scores are inspectable, so the playground can show why Puff chose something.
+- Scores are inspectable, so the playground can show why a buddy chose something.
 - Personality can be added later as per-buddy multipliers on scores, without changing the selector.
 - Tuning numbers live in code for now. Move them to data once the Producer wants to tune without engineering.

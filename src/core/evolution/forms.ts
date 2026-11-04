@@ -67,8 +67,8 @@ export function resolveForm(base: Species, form: Form): Species {
     pal.furLight = mixHex(pal.furLight, st.glow, t * 0.7);
     pal.furDark = mixHex(pal.furDark, st.deep, t);
     pal.belly = mixHex(pal.belly, st.glow, t * 0.35);
-    pal.innerEar = mixHex(pal.innerEar, st.glow, t * 0.6);
-    pal.stitch = mixHex(pal.stitch, st.deep, t);
+    pal.limb = mixHex(pal.limb, st.tint, t * 0.7);
+    pal.lid = mixHex(pal.lid, st.tint, pal.lid === base.palette.fur ? t : t * 0.35);
     pal.iris = st.iris;
     if (sec) pal.pad = mixHex(pal.pad, ELEMENT_STYLE[sec].tint, 0.6);
   }
@@ -83,7 +83,6 @@ export function resolveForm(base: Species, form: Form): Species {
       earScale: k.ear,
       headScale: k.head,
       tailScale: k.tail,
-      marking: form.stage === 1 ? 'none' : base.design.marking,
       stage: form.stage,
       element: el,
       secondary: sec,
