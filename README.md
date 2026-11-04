@@ -42,10 +42,13 @@ docs/          vision, roadmap, architecture, game design, ADRs
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Engine layout, the core/adapter boundary, event schema |
 | [GAME_DESIGN.md](docs/GAME_DESIGN.md) | Puff's behaviors, moods, reactions and affinities as built |
 | [adr/](docs/adr) | Architecture decision records |
+| [direction/](docs/direction) | Notes from the creative team to engineering |
+| [concepts/](docs/concepts) | Concept art rounds and art decisions |
 
 ## Roles
 
 - **Creative Director (Derek):** creative vision, priorities, final approval
+- **Creative Co-Director:** ChatGPT (OpenAI), via notes in [docs/direction](docs/direction)
 - **Producer / Game Design:** ChatGPT
 - **Engineering Lead:** Claude
 - **Architecture Review:** ChatGPT
