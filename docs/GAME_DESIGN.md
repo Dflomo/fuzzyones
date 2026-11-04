@@ -16,6 +16,58 @@ Five species share every behavior, reaction and physics rule. Only the body diff
 | Glimmer | Music, light, floating | Sky-blue fluff that hovers and glows, side fins, star antenna, twinkling freckles, sparkle wisp |
 | Oddling | Mystery, mimicry, unusual movement | Mustard fluff, one big eye and single brow, one floppy ear and one curly antenna, ringed tail, belly swirl |
 
+## Species personalities
+
+Same engine, different bodies and temperaments. Personality comes from multipliers on behavior scores, plus walk speed, hop height and gait.
+
+| Species | Silhouette | Gait | Speed / hop | Loves | Avoids |
+| --- | --- | --- | --- | --- | --- |
+| Puff | Wide, squat marshmallow | Waddle (side-to-side tilt) | 0.8 / 0.9 | Cuddles, belly flops, naps | Exploring, chasing |
+| Mossling | Tall acorn, narrow top | Steady stride | 0.85 / 1.0 | Peeking over edges, leaping to ledges, investigating | Dancing |
+| Impkin | Small egg, bat wings from Stage III | Bouncy scamper | 1.4 / 1.35 | Chasing your cursor, hopping | Naps, cuddles, grooming |
+| Glimmer | Dome that hovers, ribbon tendrils for feet | Floats | 0.9 / 0.8 | Dancing, idling | Hopping, flopping |
+| Oddling | Tall wobbly bean, one eye | Wobble | 1.0 / 1.1 | Investigating, stretching | Cuddles |
+
+## Growth and evolution
+
+![All evolutions](images/evolutions.png)
+
+### Stages
+
+| Stage | Size | What changes |
+| --- | --- | --- |
+| I | 74% | Baby: big eyes, tiny ears, nub horns, no markings |
+| II | 100% | The species as designed |
+| III | 110% | Stage III flourish: Puff gets a bow, Mossling's sprout blooms, Impkin grows bat wings, a star orbits Glimmer, Oddling gets spots |
+| IV | 118% | Takes an element: fur tint, iris color, head crest, body marks, aura, ambient particles |
+| V | 128% | Deepens the element with a mantle behind the body, or blends in a second element's marks and particles |
+
+### Elements
+
+Fed words are classified locally: a word list first, then a fallback from the word's affinity (nature to Earth, mystery to Shadow, and so on). Every bite shows a `+Fire` style bubble.
+
+| Element | Crest | Marks | Particles | Stage V mantle |
+| --- | --- | --- | --- | --- |
+| Fire | Three flickering flames | Flame licks on the sides | Rising embers | Flame mane |
+| Water | Droplet crest | Wave lines | Bubbles | Dorsal and side fins |
+| Earth | Amber crystals with moss | Pebbles | Orbiting leaves and stones | Crystal shards on the back |
+| Air | Feather plumes | Wind swirls | Circling wind streaks | Feathered wings, and it floats |
+| Light | Halo | Star marks | Twinkling sparkles | Sunburst rays |
+| Shadow | Crescent moon | Crescents | Drifting smoke | Smoky cape |
+
+### Rules (prototype tuning)
+
+- **Growth points** come from varied moments: pets 4, snacks 5, new discoveries 8, cuddles 4, naps 3, climbs 3, and smaller amounts for others. Repeating the same moment within a minute halves its value each time, so clicking cannot farm growth.
+- **Thresholds:** 40 to Stage II, 110 to III, 220 to IV, 380 to V. These are sized for minutes of play; the real game should stretch IV and V across weeks.
+- **Stage IV** needs at least 3 element points and takes the strongest element.
+- **Stage V** needs at least 4 element points fed since Stage IV. If a second element reached 60% of the Stage IV element in that time (and at least 2), the form blends; otherwise it deepens.
+- Evolution waits until the buddy is standing and free, then plays a glow, shake and burst. If you poke or grab it mid-evolution, the new body still arrives.
+- Switching species in the playground keeps stage and elements, so you can compare one form across species.
+
+### Names
+
+Stages I to III have species names (Puffbit, Puff, Pufflop). Stage IV and V combine an element prefix with a species stem: Emberpuff, Blazemallow, Pebblemoss, Bouldergrove. Blends hyphenate both elements: Blaze-Dusk Mallow.
+
 ## Look: plush toy
 
 All species are drawn as soft collectible plushes. Everything is procedural (Canvas 2D), so tweaks are code changes.
@@ -111,6 +163,8 @@ Poke, purring pet, picked up, big toss, typing escape, shaken off by scrolling, 
 ## Open design questions for the Director
 
 1. Which starter should be the hero we polish first?
-2. Should Puff ever leave the viewport on its own (walk off screen and come back)?
-3. How often may it make noise unprompted before it feels like too much?
-4. Should affinities shift Puff's appearance subtly before evolution exists (fur tint, sparkle)?
+2. Can a buddy ever change its element after Stage IV (re-evolve, or a rare stone), or is it permanent?
+3. Should the element also change behavior (Fire forms more energetic, Shadow forms more nocturnal), not just looks?
+4. How long should real Stage IV and V take: days, or weeks?
+5. Should Puff ever leave the viewport on its own (walk off screen and come back)?
+6. How often may it make noise unprompted before it feels like too much?

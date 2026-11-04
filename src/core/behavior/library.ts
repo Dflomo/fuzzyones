@@ -65,7 +65,7 @@ const hop: Behavior<{ n: number; next: number }> = {
     if (d.n-- <= 0) return true;
     d.next = t + 0.75;
     ctx.crouchThen(() => {
-      ctx.launch(c.facing * rng.range(40, 150), -rng.range(380, 560));
+      ctx.launch(c.facing * rng.range(40, 150) * c.species.traits.speed, -rng.range(380, 560) * c.species.traits.jump);
       if (rng.chance(0.12)) {
         c.tumble = true;
         c.vrot = rng.range(-12, 12);

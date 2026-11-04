@@ -41,6 +41,8 @@ export type BuddyEventType =
   | 'buddy_cuddled'
   | 'buddy_sulked'
   | 'buddy_blepped'
+  // growth
+  | 'buddy_evolved'
   // environment
   | 'input_escaped'
   | 'word_eaten'

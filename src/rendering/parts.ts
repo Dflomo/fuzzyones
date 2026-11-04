@@ -7,6 +7,25 @@ import type { CreatureState } from '../core/creature/state';
 
 const TAU = Math.PI * 2;
 
+type Shape = { taper: number; flat: number };
+/** Unit outline of the body at angle a: round, narrowed at the top by taper, flattened at the bottom by flat. */
+export const ux = (d: Shape, a: number) => Math.cos(a) * (1 - d.taper * Math.max(0, -Math.sin(a)));
+export const uy = (d: Shape, a: number) => Math.sin(a) * (Math.sin(a) > 0 ? 1 - d.flat : 1);
+
+/** The body silhouette as a path, so fill, clip and texture all match the species shape. */
+export function bodyPath(ctx: CanvasRenderingContext2D, d: Shape, R: number): void {
+  ctx.beginPath();
+  const n = 48;
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * TAU;
+    const x = ux(d, a) * R;
+    const y = uy(d, a) * R;
+    if (i) ctx.lineTo(x, y);
+    else ctx.moveTo(x, y);
+  }
+  ctx.closePath();
+}
+
 export interface Tuft {
   a: number;
   len: number;
@@ -33,7 +52,7 @@ function shaded(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, 
 }
 
 // ---------------------------------------------------------------- fringe
-function tufts(ctx: CanvasRenderingContext2D, list: Tuft[], base: number, lenScale: number, fill: string, t: number, fluff: number, alpha: number): void {
+function tufts(ctx: CanvasRenderingContext2D, D: Shape, list: Tuft[], base: number, lenScale: number, fill: string, t: number, fluff: number, alpha: number): void {
   ctx.fillStyle = fill;
   ctx.globalAlpha = alpha;
   ctx.beginPath();
@@ -42,8 +61,8 @@ function tufts(ctx: CanvasRenderingContext2D, list: Tuft[], base: number, lenSca
     const tip = base + tu.len * lenScale;
     const a0 = a - tu.w;
     const a1 = a + tu.w;
-    ctx.moveTo(Math.cos(a0) * base, Math.sin(a0) * base);
-    ctx.bezierCurveTo(Math.cos(a0) * (tip + 2), Math.sin(a0) * (tip + 2), Math.cos(a1) * (tip + 2), Math.sin(a1) * (tip + 2), Math.cos(a1) * base, Math.sin(a1) * base);
+    ctx.moveTo(ux(D, a0) * base, uy(D, a0) * base);
+    ctx.bezierCurveTo(ux(D, a0) * (tip + 2), uy(D, a0) * (tip + 2), ux(D, a1) * (tip + 2), uy(D, a1) * (tip + 2), ux(D, a1) * base, uy(D, a1) * base);
     ctx.closePath();
   }
   ctx.fill();
@@ -54,6 +73,7 @@ export function drawFringe(ctx: CanvasRenderingContext2D, c: CreatureState, asse
   const R = c.species.radius;
   const pal = c.species.palette;
   const fluff = c.fluff;
+  const D = c.species.design;
   switch (c.species.design.fur) {
     case 'cloud': {
       // marshmallow cloud: big soft bumps around the silhouette
@@ -63,7 +83,7 @@ export function drawFringe(ctx: CanvasRenderingContext2D, c: CreatureState, asse
           const rr = R * (0.2 + b.r * 0.08) * (1 + fluff * 0.25) + (layer ? 0 : 1.6) + wob * 0.3;
           const d = R * (0.86 + b.d * 0.04);
           ctx.fillStyle = layer ? pal.fur : pal.furDark;
-          ell(ctx, Math.cos(b.a) * d, Math.sin(b.a) * d, rr, rr);
+          ell(ctx, ux(D, b.a) * d, uy(D, b.a) * d, rr, rr);
           ctx.fill();
         }
       }
@@ -76,15 +96,15 @@ export function drawFringe(ctx: CanvasRenderingContext2D, c: CreatureState, asse
           const rr = R * (0.1 + ((i * 37) % 7) * 0.008) + (layer ? 0 : 1.4);
           const d = R * (0.98 + Math.sin(i * 2.3) * 0.02) + Math.sin(t * 1.5 + i) * 0.3 * (1 + fluff * 4);
           ctx.fillStyle = layer ? pal.fur : pal.furDark;
-          ell(ctx, Math.cos(a) * d, Math.sin(a) * d, rr, rr);
+          ell(ctx, ux(D, a) * d, uy(D, a) * d, rr, rr);
           ctx.fill();
         }
       }
       break;
     }
     case 'sleek': {
-      tufts(ctx, assets.outer, R - 2, 0.45 + fluff * 0.8, pal.furDark, t, fluff, 1);
-      tufts(ctx, assets.inner, R - 3, 0.4 + fluff * 0.6, pal.fur, t, fluff, 0.9);
+      tufts(ctx, D, assets.outer, R - 2, 0.45 + fluff * 0.8, pal.furDark, t, fluff, 1);
+      tufts(ctx, D, assets.inner, R - 3, 0.4 + fluff * 0.6, pal.fur, t, fluff, 0.9);
       // cowlick on the crown
       ctx.strokeStyle = pal.fur;
       ctx.lineWidth = 3.4;
@@ -96,8 +116,8 @@ export function drawFringe(ctx: CanvasRenderingContext2D, c: CreatureState, asse
       break;
     }
     default:
-      tufts(ctx, assets.outer, R - 2, 1 + fluff * 0.8, pal.furDark, t, fluff, 1);
-      tufts(ctx, assets.inner, R - 3, 1 + fluff * 0.6, pal.fur, t, fluff, 0.8);
+      tufts(ctx, D, assets.outer, R - 2, 1 + fluff * 0.8, pal.furDark, t, fluff, 1);
+      tufts(ctx, D, assets.inner, R - 3, 1 + fluff * 0.6, pal.fur, t, fluff, 0.8);
   }
 }
 
@@ -108,6 +128,8 @@ export function drawEars(ctx: CanvasRenderingContext2D, c: CreatureState, t: num
   const rig = c.rig;
   const fx = rig.faceX * R * 0.06;
   const style = c.species.design.ears;
+  const tq = 1 - c.species.design.taper * 0.75;
+  const es = c.species.design.earScale;
   for (const side of [-1, 1]) {
     const droop = side < 0 ? rig.earL : rig.earR;
     ctx.save();
@@ -116,7 +138,8 @@ export function drawEars(ctx: CanvasRenderingContext2D, c: CreatureState, t: num
       const odd = style === 'odd';
       const L = R * (odd ? 0.8 : 1.15);
       const W = R * (odd ? 0.26 : 0.27);
-      ctx.translate(side * R * (odd ? 0.5 : 0.3) + fx, -R * 0.78);
+      ctx.translate((side * R * (odd ? 0.5 : 0.3) + fx) * tq, -R * 0.78);
+      ctx.scale(es, es);
       ctx.rotate(side * (0.12 + droop * (odd ? 1.25 : 1.05) + (odd ? 0.5 : 0)));
       const bend = side * (0.25 + Math.max(0, droop)) * L * 0.35;
       const g = ctx.createLinearGradient(0, 0, 0, -L);
@@ -138,7 +161,8 @@ export function drawEars(ctx: CanvasRenderingContext2D, c: CreatureState, t: num
       ctx.fill();
     } else if (style === 'odd') {
       // the other side is a curly antenna with a bobble
-      ctx.translate(R * 0.42 + fx, -R * 0.82);
+      ctx.translate((R * 0.42 + fx) * tq, -R * 0.82);
+      ctx.scale(es, es);
       const sway = Math.sin(t * 2.4) * 0.15 - droop * 0.4;
       ctx.rotate(0.25 + sway);
       ctx.strokeStyle = pal.accent;
@@ -155,7 +179,8 @@ export function drawEars(ctx: CanvasRenderingContext2D, c: CreatureState, t: num
       ell(ctx, 11, -R * 0.8, 4.6, 4.6);
       ctx.fill();
     } else if (style === 'leaf') {
-      ctx.translate(side * R * 0.56 + fx, -R * 0.66);
+      ctx.translate((side * R * 0.56 + fx) * tq, -R * 0.66);
+      ctx.scale(es, es);
       ctx.rotate(side * (0.85 + droop * 0.75));
       const L = R * 0.62;
       const W = R * 0.24;
@@ -181,7 +206,8 @@ export function drawEars(ctx: CanvasRenderingContext2D, c: CreatureState, t: num
       }
       ctx.stroke();
     } else if (style === 'bat') {
-      ctx.translate(side * R * 0.5 + fx, -R * 0.62);
+      ctx.translate((side * R * 0.5 + fx) * tq, -R * 0.62);
+      ctx.scale(es, es);
       ctx.rotate(side * (0.55 + droop * 0.8));
       const L = R * 0.72;
       const W = R * 0.38;
@@ -202,7 +228,8 @@ export function drawEars(ctx: CanvasRenderingContext2D, c: CreatureState, t: num
       ctx.fill();
     } else if (style === 'fin') {
       // small translucent side fins with ribs
-      ctx.translate(side * R * 0.9 + fx, -R * 0.22);
+      ctx.translate((side * R * 0.9 + fx) * tq, -R * 0.22);
+      ctx.scale(es, es);
       ctx.rotate(side * (1.25 + droop * 0.5) + Math.sin(t * 3 + side) * 0.08);
       const L = R * 0.5;
       const W = R * 0.3;
@@ -235,10 +262,12 @@ export function drawHeadExtra(ctx: CanvasRenderingContext2D, c: CreatureState, t
   const rig = c.rig;
   const sway = Math.sin(t * 2) * 0.12 + (rig.earL + rig.earR) * -0.15 + rig.armLag * 0.6;
   const fx = rig.faceX * R * 0.08;
+  const hs = c.species.design.headScale;
   switch (c.species.design.head) {
     case 'sprout': {
       ctx.save();
       ctx.translate(fx, -R * 0.92);
+      ctx.scale(hs, hs);
       ctx.rotate(sway);
       ctx.strokeStyle = pal.accentDark;
       ctx.lineWidth = 2.6;
@@ -268,6 +297,21 @@ export function drawHeadExtra(ctx: CanvasRenderingContext2D, c: CreatureState, t
         ctx.stroke();
         ctx.restore();
       }
+      if (c.species.design.stage >= 3) {
+        // the sprout has bloomed
+        ctx.save();
+        ctx.translate(0, -R * 0.44);
+        for (let i = 0; i < 5; i++) {
+          const ang = (i / 5) * TAU + t * 0.3;
+          ctx.fillStyle = '#fff5f8';
+          ell(ctx, Math.cos(ang) * R * 0.09, Math.sin(ang) * R * 0.09, R * 0.08, R * 0.08);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#ffcf4a';
+        ell(ctx, 0, 0, R * 0.07, R * 0.07);
+        ctx.fill();
+        ctx.restore();
+      }
       ctx.restore();
       break;
     }
@@ -275,6 +319,7 @@ export function drawHeadExtra(ctx: CanvasRenderingContext2D, c: CreatureState, t
       for (const side of [-1, 1]) {
         ctx.save();
         ctx.translate(side * R * 0.32 + fx, -R * 0.86);
+      ctx.scale(hs, hs);
         ctx.rotate(side * 0.3);
         ctx.scale(1.45, 1.45);
         const g = ctx.createLinearGradient(0, 0, 0, -R * 0.36);
@@ -302,6 +347,7 @@ export function drawHeadExtra(ctx: CanvasRenderingContext2D, c: CreatureState, t
     case 'antenna': {
       ctx.save();
       ctx.translate(fx, -R * 0.94);
+      ctx.scale(hs, hs);
       ctx.rotate(sway * 1.6);
       ctx.strokeStyle = pal.furDark;
       ctx.lineWidth = 2;
@@ -346,10 +392,12 @@ export function drawTail(ctx: CanvasRenderingContext2D, c: CreatureState, t: num
   const f = c.facing;
   const style = c.species.design.tail;
   const swing = c.rig.tail * -f;
+  const ts = c.species.design.tailScale;
   ctx.save();
   if (front) {
     // curled: tail wraps around the front of the body
     ctx.translate(f * R * 0.35, R * 0.82);
+    ctx.scale(ts, ts);
     const puffs: [number, number, number][] = [[-R * 0.5, 0, 0.2], [-R * 0.2, R * 0.05, 0.24], [R * 0.12, R * 0.02, 0.24], [R * 0.42, -R * 0.06, 0.2]];
     const light = style === 'leaf' ? pal.accent : pal.furLight;
     const dark = style === 'leaf' ? pal.accentDark : pal.furDark;
@@ -362,6 +410,7 @@ export function drawTail(ctx: CanvasRenderingContext2D, c: CreatureState, t: num
     return;
   }
   ctx.translate(-f * R * 0.86, R * 0.42);
+  ctx.scale(ts, ts);
   ctx.rotate(swing);
   switch (style) {
     case 'cotton': {
@@ -504,4 +553,123 @@ export function drawBellyMarking(ctx: CanvasRenderingContext2D, c: CreatureState
   }
   ctx.stroke();
   ctx.globalAlpha = 1;
+}
+
+// ---------------------------------------------------------------- Stage III flourishes
+/** Wings sit behind the body. Bat wings for Impkin; Air forms at Stage V get feathered ones (see elementFx). */
+export function drawWings(ctx: CanvasRenderingContext2D, c: CreatureState, t: number, style: 'bat' | 'feather', fill: string, edge: string): void {
+  const R = c.species.radius;
+  const airborne = !c.grounded && !c.hang;
+  const flap = Math.sin(t * (airborne ? 26 : 3)) * (airborne ? 0.55 : 0.12);
+  for (const side of [-1, 1]) {
+    ctx.save();
+    ctx.translate(side * R * 0.72, -R * 0.25);
+    ctx.rotate(side * (-0.35 + flap));
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    if (style === 'bat') {
+      const L = R * 0.85;
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(side * L * 0.5, -L * 0.75, side * L, -L * 0.55);
+      ctx.quadraticCurveTo(side * L * 0.85, -L * 0.2, side * L * 0.95, 0);
+      ctx.quadraticCurveTo(side * L * 0.7, -L * 0.05, side * L * 0.62, L * 0.18);
+      ctx.quadraticCurveTo(side * L * 0.42, 0, side * L * 0.3, L * 0.25);
+      ctx.quadraticCurveTo(side * L * 0.15, L * 0.05, 0, R * 0.15);
+    } else {
+      const L = R * 1.0;
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(side * L * 0.4, -L * 0.9, side * L * 1.1, -L * 0.6, side * L * 1.05, -L * 0.1);
+      for (let i = 0; i < 4; i++) {
+        const k = i / 4;
+        ctx.quadraticCurveTo(side * L * (1.0 - k * 0.25), L * (0.05 + k * 0.08), side * L * (0.85 - k * 0.22), L * (0.02 + k * 0.1));
+      }
+      ctx.quadraticCurveTo(side * L * 0.3, L * 0.25, 0, R * 0.15);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+export function drawFlourishFront(ctx: CanvasRenderingContext2D, c: CreatureState, t: number): void {
+  const d = c.species.design;
+  if (d.stage < 3) return;
+  const R = c.species.radius;
+  const pal = c.species.palette;
+  switch (d.flourish) {
+    case 'bow': {
+      // ribbon bow at the base of one ear
+      ctx.save();
+      ctx.translate(-R * 0.42, -R * 0.78);
+      ctx.rotate(-0.3 + Math.sin(t * 2) * 0.05);
+      ctx.fillStyle = pal.nose;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(side * R * 0.26, -R * 0.2, side * R * 0.28, R * 0.02);
+        ctx.quadraticCurveTo(side * R * 0.2, R * 0.12, 0, 0);
+        ctx.fill();
+      }
+      ctx.fillStyle = pal.accent;
+      ell(ctx, 0, 0, R * 0.07, R * 0.07);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'orbit': {
+      const a = t * 1.4;
+      const x = Math.cos(a) * R * 1.25;
+      const y = -R * 0.2 + Math.sin(a) * R * 0.35;
+      if (Math.sin(a) > -0.2) star(ctx, x, y, 5, 2.2, pal.accent, t * 2);
+      break;
+    }
+    case 'spots': {
+      ctx.fillStyle = pal.accent;
+      ctx.globalAlpha = 0.35;
+      for (const [x, y, r] of [[-0.55, -0.6, 0.09], [0.62, -0.48, 0.07], [-0.78, -0.1, 0.06], [0.2, -0.82, 0.06], [0.75, 0.02, 0.05]] as const) {
+        ell(ctx, x * R, y * R, r * R, r * R);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      break;
+    }
+  }
+}
+
+/** Orbit stars behind the body when on the far side. */
+export function drawFlourishBack(ctx: CanvasRenderingContext2D, c: CreatureState, t: number): void {
+  const d = c.species.design;
+  if (d.stage < 3) return;
+  const R = c.species.radius;
+  if (d.flourish === 'wings') drawWings(ctx, c, t, 'bat', c.species.palette.furDark, c.species.palette.line);
+  if (d.flourish === 'orbit') {
+    const a = t * 1.4;
+    if (Math.sin(a) <= -0.2) star(ctx, Math.cos(a) * R * 1.25, -R * 0.2 + Math.sin(a) * R * 0.35, 4, 1.8, c.species.palette.accentDark, t * 2);
+  }
+}
+
+// ---------------------------------------------------------------- Glimmer tendrils instead of feet
+export function drawTendrils(ctx: CanvasRenderingContext2D, c: CreatureState, t: number): void {
+  const R = c.species.radius;
+  const pal = c.species.palette;
+  const y0 = R * (1 - c.species.design.flat) - 2;
+  const curl = c.asleep ? 0.6 : 0;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 4; i++) {
+    const x0 = (i - 1.5) * R * 0.32;
+    const L = R * (0.45 + (i % 2) * 0.12) * (1 - curl);
+    const w = Math.sin(t * 3 + i * 1.3) * 5 + c.rig.armLag * 12;
+    ctx.strokeStyle = i % 2 ? pal.innerEar : pal.furDark;
+    ctx.lineWidth = 3.4 - (i % 2) * 0.8;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.bezierCurveTo(x0 + w, y0 + L * 0.4, x0 - w, y0 + L * 0.7, x0 + w * 0.5, y0 + L);
+    ctx.stroke();
+    ctx.fillStyle = pal.accent;
+    ell(ctx, x0 + w * 0.5, y0 + L, 2, 2);
+    ctx.fill();
+  }
 }

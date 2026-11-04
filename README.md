@@ -8,9 +8,9 @@ Players raise small fuzzy creatures that live in the browser (and later the desk
 
 ## Status
 
-Phase 1: one buddy, Puff, in a browser playground. See [docs/ROADMAP.md](docs/ROADMAP.md). Five starter species share one engine. Pick one in the playground panel, or open `/sheet.html` in dev for the lineup.
+Phase 1: one buddy, Puff, in a browser playground. See [docs/ROADMAP.md](docs/ROADMAP.md). Five starter species share one engine, each growing through five stages. Stages IV and V take an element (Fire, Water, Earth, Air, Light, Shadow) from what you feed them. Pick a species and watch it grow in the playground panel, or open `/sheet.html` in dev for every form.
 
-![Starter lineup](docs/images/lineup.png)
+![All evolutions](docs/images/evolutions.png)
 
 ## Run it
 

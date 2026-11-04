@@ -23,7 +23,8 @@ export function scoreBehaviors(
 ): ScoredBehavior[] {
   return behaviors
     .map((b) => {
-      const base = b.score(ctx);
+      // Species personality: e.g. Impkin loves chasing, Puff loves cuddles.
+      const base = b.score(ctx) * (ctx.c?.species.traits?.bias[b.id] ?? 1);
       if (base <= 0) return { id: b.id, score: 0 };
       const repeats = recent.filter((r) => r === b.id).length;
       return { id: b.id, score: base - repeats * REPEAT_PENALTY + rng.range(0, NOISE) };

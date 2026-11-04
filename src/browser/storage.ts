@@ -1,9 +1,12 @@
 /** Local-only persistence. Nothing leaves the device. */
+import type { GrowthSave } from '../core/evolution/progression';
+
 export interface SaveData {
   version: 1;
   discovered: string[];
   affinities: Record<string, number>;
   species?: string;
+  growth?: GrowthSave;
 }
 
 const KEY = 'fuzzy-buddies:v1';

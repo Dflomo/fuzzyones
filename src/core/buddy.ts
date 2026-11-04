@@ -13,6 +13,7 @@ import { BEHAVIORS, behaviorById } from './behavior/library';
 import { pushRecent, scoreBehaviors, type ScoredBehavior } from './behavior/selector';
 import type { Behavior, BuddyContext, CompanionMode } from './behavior/types';
 import { classifyWord, isBigBite, isStormy, type Affinity } from './creature/affinity';
+import { classifyElement, ELEMENT_STYLE } from './evolution/elements';
 import { createCreature, PUFF, type CreatureState, type Expression, type Mood, type Species } from './creature/state';
 import { DISCOVERIES, type DiscoveryKey } from './events/discoveries';
 import { EventBus, type BuddyEventType, type EventPayload } from './events/events';
@@ -63,6 +64,7 @@ export class Buddy implements BuddyContext {
   private petCooldown = 0;
   private startleCooldown = 0;
   private escapeCooldown = 0;
+  private pendingEvolve: { next: Species; data: EventPayload } | null = null;
 
   constructor(opts: BuddyOptions = {}) {
     this.c = createCreature(opts.species ?? PUFF, opts.spawnX ?? 240);
@@ -329,6 +331,53 @@ export class Buddy implements BuddyContext {
     this.react('Dropping in', 0.2, { waitGround: true });
   }
 
+  /** True when the buddy is free to play an evolution (standing, not held or mid-reaction). */
+  canEvolve(): boolean {
+    const c = this.c;
+    return !c.hidden && c.grounded && !c.held && !c.hang && c.flipT === null && this.activity?.kind !== 'reaction';
+  }
+
+  /**
+   * Play the evolution: glow and shake, swap the body at the peak, then a
+   * happy bounce. Hosts decide the new form (see evolution/progression.ts).
+   */
+  evolve(next: Species, data: EventPayload = {}): void {
+    const c = this.c;
+    this.wake();
+    this.setExpr('surprised', 1.2);
+    this.sound('chirp');
+    this.pendingEvolve = { next, data };
+    this.react('Evolving', 2.4, {
+      update: (t) => {
+        c.evolveGlow = t < 1.2 ? t / 1.2 : Math.max(0, 1 - (t - 1.2) / 1.0);
+        c.sx = 1 + Math.sin(t * 40) * 0.04 * Math.min(1, t);
+        if (t > 0.4 && this.rng.chance(0.25)) this.effect('✦', { size: 12 + this.rng.range(0, 8), vx: this.rng.range(-80, 80), vy: this.rng.range(-120, -40), life: 0.8 });
+        if (t >= 1.2) this.finishEvolve();
+        if (t > 2.35) c.evolveGlow = 0;
+      },
+    });
+  }
+
+  /** Swap the body. Also runs early if a poke or pickup interrupts the animation. */
+  private finishEvolve(): void {
+    const p = this.pendingEvolve;
+    if (!p) return;
+    this.pendingEvolve = null;
+    const c = this.c;
+    const bottom = c.y + c.species.radius;
+    c.species = p.next;
+    if (c.grounded) c.y = bottom - p.next.radius;
+    c.sy = 1.35;
+    c.sx = 0.8;
+    this.setExpr('happy', 1.6);
+    this.sound('fanfare');
+    for (let i = 0; i < 8; i++) this.effect('✦', { size: 16, vx: Math.cos(i) * 140, vy: Math.sin(i) * 140 - 60, life: 1 });
+    this.emit('buddy_evolved', p.data);
+    this.discover('evolve');
+    if (p.next.design.element) this.discover('elemental');
+    if (p.next.design.secondary) this.discover('blend');
+  }
+
   setHidden(hidden: boolean): void {
     this.c.hidden = hidden;
   }
@@ -360,6 +409,11 @@ export class Buddy implements BuddyContext {
     stepRig(this.c, world, dt, this.now, this.rng);
     this.stepFace();
     this.stepActivity(dt);
+    const a = this.activity;
+    if (this.pendingEvolve && !(a?.kind === 'reaction' && a.label === 'Evolving')) {
+      this.finishEvolve();
+      this.c.evolveGlow = 0;
+    }
     stepEffects(this.effects, dt);
   }
 
@@ -457,7 +511,7 @@ export class Buddy implements BuddyContext {
       if (Math.abs(dx) < 5) c.walkTo = null;
       else {
         c.facing = sign(dx);
-        c.x += c.facing * Math.min(Math.abs(dx), c.walkSpeed * dt);
+        c.x += c.facing * Math.min(Math.abs(dx), c.walkSpeed * c.species.traits.speed * dt);
         c.legPhase += dt * c.walkSpeed * 0.1;
         c.walking = true;
       }
@@ -610,7 +664,9 @@ export class Buddy implements BuddyContext {
 
   private digest(word: string): void {
     const affinity: Affinity | null = classifyWord(word);
-    this.emit('word_eaten', affinity ? { word, affinity } : { word, affinity: 'unknown' });
+    const element = classifyElement(word);
+    this.emit('word_eaten', { word, affinity: affinity ?? 'unknown', element: element ?? 'none' });
+    if (element) this.effect(`+${ELEMENT_STYLE[element].name}`, { size: 12, bubble: true, life: 1.6, vy: -30, x: this.c.x + this.c.species.radius });
     this.discover('eat');
     if (isBigBite(word)) {
       this.after(0.1, () => {

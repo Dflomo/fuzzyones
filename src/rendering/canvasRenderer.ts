@@ -8,7 +8,8 @@ import type { Effect } from '../core/animation/effects';
 import { lookTarget } from '../core/animation/rig';
 import type { CreatureState, Pose } from '../core/creature/state';
 import type { WorldSnapshot } from '../core/world';
-import { drawBellyMarking, drawBodyMarkings, drawEars, drawFringe, drawHeadExtra, drawTail, type PartAssets, type Tuft } from './parts';
+import { bodyPath, drawBellyMarking, drawBodyMarkings, drawEars, drawFlourishBack, drawFlourishFront, drawFringe, drawHeadExtra, drawTail, drawTendrils, type PartAssets, type Tuft } from './parts';
+import { drawAura, drawCrest, drawMantle, drawMarks, drawParticles } from './elementFx';
 
 export interface Theme {
   ink: string;
@@ -152,6 +153,9 @@ export class CanvasRenderer {
     const d = c.species.design;
     const hover = d.floats && !c.held && !c.hang && !c.asleep ? 6 + Math.sin(t * 2.2) * 3 : 0;
 
+    // elemental aura sits behind everything
+    drawAura(ctx, c, c.x, c.y - hover);
+
     // contact shadow (fainter and smaller while hovering)
     if (c.grounded && !c.hang) {
       ctx.fillStyle = `rgba(40,10,25,${0.16 - hover * 0.008})`;
@@ -166,7 +170,7 @@ export class CanvasRenderer {
     const sx = c.sx * poseSx * (1 - br * 0.012) * d.bodyW;
     const sy = c.sy * poseSy * (1 + br * 0.022) * d.bodyH;
 
-    if (d.floats && !c.asleep) {
+    if (d.floats && !c.asleep && !d.element) {
       const glow = ctx.createRadialGradient(c.x, c.y - hover, R * 0.6, c.x, c.y - hover, R * 1.9);
       glow.addColorStop(0, 'rgba(255,248,190,.35)');
       glow.addColorStop(1, 'rgba(255,248,190,0)');
@@ -175,9 +179,22 @@ export class CanvasRenderer {
       ctx.fill();
     }
 
+    // gait: how each species carries itself
+    let gaitRot = 0;
+    let gaitY = 0;
+    const lp = c.legPhase;
+    if (c.walking) {
+      if (d.gait === 'waddle') gaitRot = Math.sin(lp) * 0.1;
+      else if (d.gait === 'scamper') gaitY = -Math.abs(Math.sin(lp)) * R * 0.14;
+      else if (d.gait === 'stride') gaitY = -Math.abs(Math.sin(lp)) * R * 0.05;
+      else if (d.gait === 'wobble') gaitRot = Math.sin(lp * 0.5) * 0.18;
+      else if (d.gait === 'float') gaitRot = Math.sin(lp * 0.4) * 0.05;
+    }
+    if (d.gait === 'wobble' && c.grounded && !c.asleep) gaitRot += Math.sin(t * 4.3) * 0.04;
+
     ctx.save();
-    ctx.translate(c.x, c.y - hover);
-    ctx.rotate(c.rot + rig.lean);
+    ctx.translate(c.x, c.y - hover + gaitY);
+    ctx.rotate(c.rot + rig.lean + gaitRot);
     ctx.translate(0, R);
     ctx.scale(sx, sy);
     ctx.translate(0, -R);
@@ -185,6 +202,10 @@ export class CanvasRenderer {
     // --- tail (behind unless curled) ---
     const tailBack = b.curl < 0.5;
     if (tailBack) drawTail(ctx, c, t, false);
+
+    // --- Stage V mantle and wings sit behind the body ---
+    drawMantle(ctx, c, t);
+    drawFlourishBack(ctx, c, t);
 
     // --- feet behind body when flopping (kicking soles in the air) ---
     if (b.flop > 0.3 && !c.asleep) {
@@ -211,13 +232,13 @@ export class CanvasRenderer {
     g.addColorStop(0.55, pal.fur);
     g.addColorStop(1, pal.furDark);
     ctx.fillStyle = g;
-    this.ell(0, 0, R, R);
+    bodyPath(ctx, d, R);
     ctx.fill();
 
     // felt texture
     if (this.felt) {
       ctx.save();
-      this.ell(0, 0, R, R);
+      bodyPath(ctx, d, R);
       ctx.clip();
       ctx.globalAlpha = 0.28;
       ctx.fillStyle = this.felt;
@@ -244,6 +265,7 @@ export class CanvasRenderer {
     ctx.arc(0, 0, R - 2.5, Math.PI * 1.08, Math.PI * 1.52);
     ctx.stroke();
     drawBodyMarkings(ctx, c, t);
+    drawMarks(ctx, c, t);
 
     // belly patch with stitches
     const bx = rig.faceX * R * 0.05;
@@ -266,12 +288,15 @@ export class CanvasRenderer {
 
     // --- horns, sprout, antenna ---
     drawHeadExtra(ctx, c, t);
+    drawCrest(ctx, c, t);
+    drawFlourishFront(ctx, c, t);
 
     // --- face ---
     this.drawFace(c, world, t, activity);
 
     // --- feet (front) ---
-    this.drawFeet(c, airborne, t);
+    if (d.feet === 'tendrils') drawTendrils(ctx, c, t);
+    else this.drawFeet(c, airborne, t);
 
     // --- arms ---
     if (!armsBehind) this.drawArms(c, airborne, t, activity);
@@ -279,7 +304,24 @@ export class CanvasRenderer {
     // --- tail wrapped in front when curled ---
     if (!tailBack) drawTail(ctx, c, t, true);
 
+    // evolution glow washes the body white at the peak
+    if (c.evolveGlow > 0) {
+      ctx.fillStyle = `rgba(255,255,245,${0.85 * c.evolveGlow})`;
+      bodyPath(ctx, d, R * 1.08);
+      ctx.fill();
+    }
+
     ctx.restore();
+
+    drawParticles(ctx, c, c.x, c.y - hover, t);
+    if (c.evolveGlow > 0) {
+      const eg = ctx.createRadialGradient(c.x, c.y, R * 0.5, c.x, c.y, R * 3);
+      eg.addColorStop(0, `rgba(255,250,210,${0.55 * c.evolveGlow})`);
+      eg.addColorStop(1, 'rgba(255,250,210,0)');
+      ctx.fillStyle = eg;
+      this.ell(c.x, c.y, R * 3, R * 3);
+      ctx.fill();
+    }
   }
 
 

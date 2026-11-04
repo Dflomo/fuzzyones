@@ -7,9 +7,9 @@ Phases come from [VISION.md](VISION.md). Each milestone should be small, visuall
 | 1. A living creature | One rendered buddy with movement, expressions, eye tracking, idling, mouse reactions | **Playground done** (this PR) |
 | 2. Physical comedy | Jumping, falling, tumbling, grabbing, dragging, climbing, recoveries | Partly done: leaps, ledge hangs, pull-ups, tosses, flips, wall bonks |
 | 3. Browser interaction | Real page geometry, input fields, text investigation, word feeding | Playground only. Next: browser extension |
-| 4. Autonomous life | Needs, behavior selection, personality, idle activities, procedural sound | Core loop done. Personality traits not yet |
-| 5. Early progression | Experience, affinities, discovery events, simple rewards, persistence | Event schema, discoveries, affinity counts in place |
-| 6. First evolution | Two alternate forms | Not started |
+| 4. Autonomous life | Needs, behavior selection, personality, idle activities, procedural sound | Core loop done. Species personalities in place; per-buddy traits next |
+| 5. Early progression | Experience, affinities, discovery events, simple rewards, persistence | Growth points, element points, discoveries and local persistence in place |
+| 6. Evolution | Five stages per species, elemental Stage IV and V | **Pulled forward by Director, prototype done**: all forms drawn, feeding drives growth |
 | 7. Sanctuary and collection | Five-buddy sanctuary, other species, Codex | Not started |
 
 ## Next milestones

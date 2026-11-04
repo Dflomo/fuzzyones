@@ -59,7 +59,7 @@ describe('Buddy engine (headless)', () => {
     buddy.feed('mushroom');
     run(2);
     const eaten = events.find((e) => e.type === 'word_eaten');
-    expect(eaten?.data).toEqual({ word: 'mushroom', affinity: 'nature' });
+    expect(eaten?.data).toEqual({ word: 'mushroom', affinity: 'nature', element: 'earth' });
   });
 
   it('can be picked up, tossed and recovers', () => {

@@ -3,20 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fuzzy Buddies Lineup</title>
+<title>Fuzzy Buddies Evolutions</title>
 <style>
-  body { margin: 0; padding: 20px; background: #edf2f5; font: 13px ui-monospace, Menlo, monospace; color: #1c2331; }
-  h1 { font: 700 20px system-ui, sans-serif; margin: 0 0 16px; }
-  .row { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; margin-bottom: 12px; }
-  .row header h2 { font: 700 18px system-ui, sans-serif; margin: 0; }
-  .row header p { margin: 4px 0 0; color: #5b6577; font: 12px system-ui, sans-serif; }
-  .cells { display: flex; gap: 8px; flex-wrap: wrap; }
-  figure { margin: 0; background: #fff; border: 1px solid #d5dde5; border-radius: 10px; }
-  figcaption { text-align: center; padding: 0 0 6px; color: #5b6577; font-size: 11px; }
+  body { margin: 0; padding: 20px; background: #edf2f5; font: 12px system-ui, sans-serif; color: #1c2331; }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  section { background: #f7f9fb; border: 1px solid #d5dde5; border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+  section header { display: flex; gap: 10px; align-items: baseline; margin-bottom: 8px; }
+  section h2 { font-size: 17px; margin: 0; }
+  section p { margin: 0; color: #5b6577; }
+  .groups { display: flex; flex-wrap: wrap; gap: 14px; }
+  .group h3 { font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: .06em; text-transform: uppercase; color: #5b6577; margin: 0 0 6px; }
+  .cells { display: flex; gap: 6px; flex-wrap: wrap; }
+  figure { margin: 0; background: #fff; border: 1px solid #d5dde5; border-radius: 10px; width: 140px; }
+  figcaption { text-align: center; padding: 0 4px 6px; display: grid; gap: 1px; }
+  figcaption b { font-size: 11px; }
+  figcaption span { color: #5b6577; font-size: 10px; }
 </style>
 </head>
 <body>
-<h1>Fuzzy Buddies starter lineup</h1>
+<h1>Fuzzy Buddies evolutions</h1>
 <div id="grid"></div>
 <script type="module" src="/src/sheet.ts"></script>
 </body>

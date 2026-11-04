@@ -26,6 +26,9 @@ export const DISCOVERIES = {
   cuddle: 'Cursor cuddle',
   sulk: 'Sulking',
   blep: 'Blep',
+  evolve: 'First evolution',
+  elemental: 'Elemental form',
+  blend: 'Blended elements',
 } as const;
 
 export type DiscoveryKey = keyof typeof DISCOVERIES;

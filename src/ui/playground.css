@@ -45,7 +45,7 @@ figcaption{font-size:13px;color:var(--muted);margin-top:6px;font-family:var(--f-
 textarea{font:15px var(--f-body);color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:8px;padding:10px;min-height:96px;resize:vertical;width:100%}
 .small{font-size:14px;color:var(--muted)}
 /* inspector */
-aside{position:sticky;top:max(16px,env(safe-area-inset-top,0px));background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:16px;min-width:0}
+aside{grid-template-columns:minmax(0,1fr);position:sticky;top:max(16px,env(safe-area-inset-top,0px));background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:16px;min-width:0}
 .who{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .who h3{font-family:var(--f-display);font-size:26px;margin:0;color:var(--accent);font-weight:400}
 .stage{font-family:var(--f-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -60,6 +60,14 @@ aside{position:sticky;top:max(16px,env(safe-area-inset-top,0px));background:var(
 .why .fill{background:var(--good)}
 .controls{display:flex;flex-wrap:wrap;gap:6px}
 .species{display:flex;flex-wrap:wrap;gap:6px}
+.growth{display:grid;gap:8px;padding:12px;border-radius:10px;background:var(--bg)}
+.growth .lbl{margin:0}
+.gform{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.gform b{font-size:17px}
+.gform span{font-size:13px;color:var(--muted)}
+.track.big{height:10px;border-radius:5px}
+.ghint{margin:0;font-size:13px;color:var(--muted);min-height:1.2em}
+.chip i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px;border:1px solid rgba(0,0,0,.2)}
 .species button{display:flex;align-items:center;gap:6px}
 .species i{width:12px;height:12px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.2)}
 button{font:600 13px var(--f-body);background:var(--bg);color:var(--ink);border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}

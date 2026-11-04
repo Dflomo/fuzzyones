@@ -128,6 +128,8 @@ export interface CreatureState {
   /** Seconds the buddy has been standing still. Drives idle sitting. */
   stillFor: number;
   tears: number;
+  /** 0 to 1 glow while evolving. */
+  evolveGlow: number;
   rig: Rig;
   hungryNear: boolean;
   mood: Mood;
@@ -144,7 +146,7 @@ export function createCreature(species: Species = PUFF, x = 240, y = -90): Creat
     held: false, hang: null, leap: null, tumble: false, pendingDizzy: false, flipT: null,
     asleep: false, hidden: false,
     expr: 'surprised', exprUntil: 1.2, blink: 1, blinkStart: -9, nextBlink: 2,
-    look: null, arm: 'rest', pose: 'stand', poseSide: 1, reach: null, stillFor: 0, tears: 0,
+    look: null, arm: 'rest', pose: 'stand', poseSide: 1, reach: null, stillFor: 0, tears: 0, evolveGlow: 0,
     rig: {
       earL: 0, earR: 0, earVL: 0, earVR: 0, tail: 0, tailV: 0, armLag: 0, armLagV: 0, lean: 0,
       breath: 0, prevVx: 0, prevVy: 0, twitch: 0, blepUntil: 0, faceX: 0, faceY: 0,

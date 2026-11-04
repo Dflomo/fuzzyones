@@ -38,11 +38,11 @@
   </figure>
 
   <h2 data-surface="heading">The pantry</h2>
-  <p>Every word Puff eats is sorted into an affinity, like nature, music or weather. Later these feed evolution. For now they mostly change how Puff reacts.</p>
+  <p>Every word your buddy eats counts toward an element: fire, water, earth, air, light or shadow. Its strongest element shapes Stage IV. Feed it plenty of a second element after that and Stage V blends the two.</p>
   <div class="pantry" id="pantry"></div>
 
   <h2 data-surface="heading">Orchard notes</h2>
-  <p>Moss grows on the north side of the old oak, and the bees work the clover until the fog rolls in. Somebody left a synth running in the barn, humming a slow melody under the thunder. There is honey on the windowsill and a riddle carved into the gate.</p>
+  <p>Moss grows on the north side of the old oak, and the bees work the clover until the fog rolls in. Embers still glow in the barn stove, where somebody left a synth humming under the thunder. There is honey on the windowsill and a riddle carved into the gate.</p>
   <p>Select any of these words and drag them onto Puff. It has opinions.</p>
 
   <h2 data-surface="heading">Leave a note</h2>
@@ -64,6 +64,14 @@
     <p class="lbl">Species</p>
     <div class="species" id="species" role="group" aria-label="Choose a species"></div>
   </div>
+  <div class="growth">
+    <p class="lbl">Growth</p>
+    <div class="gform"><b id="gname">Puffbit</b><span id="glabel">Stage I</span></div>
+    <div class="track big" role="progressbar" aria-label="Growth toward the next stage" aria-valuemin="0" aria-valuemax="100" id="gtrack"><div class="fill" id="gbar"></div></div>
+    <p class="ghint" id="ghint"></p>
+    <div class="bars" id="elements"></div>
+    <div class="controls"><button id="bGrow">Grow a stage</button><button id="bReset">Start over</button></div>
+  </div>
   <div class="doing" id="doing">Arriving <span>· just dropped in</span></div>
   <div>
     <p class="lbl">Mood</p>
@@ -82,10 +90,6 @@
   <div>
     <p class="lbl">Discoveries <span id="dcount"></span></p>
     <div class="found" id="found"></div>
-  </div>
-  <div>
-    <p class="lbl">Affinities from snacks</p>
-    <div class="bars" id="aff"></div>
   </div>
   <div>
     <p class="lbl">Event stream</p>

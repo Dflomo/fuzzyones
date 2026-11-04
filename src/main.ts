@@ -2,6 +2,8 @@
 import './ui/playground.css';
 import { Buddy } from './core/buddy';
 import { PUFF, SPECIES, speciesById } from './core/creature/species';
+import { classifyElement, ELEMENT_STYLE } from './core/evolution/elements';
+import { Progression } from './core/evolution/progression';
 import { BrowserHost } from './browser/host';
 import { loadSave, writeSave } from './browser/storage';
 import { WebAudioPort } from './browser/webAudio';
@@ -10,7 +12,14 @@ import { Inspector } from './ui/inspector';
 
 const save = loadSave();
 const audio = new WebAudioPort();
-const buddy = new Buddy({ audio, species: speciesById(save.species ?? '') ?? PUFF, discovered: save.discovered, spawnX: Math.min(innerWidth * 0.3, 240) });
+const buddy = new Buddy({ audio, discovered: save.discovered, spawnX: Math.min(innerWidth * 0.3, 240) });
+// Growth owns the base species and current form; it resolves the body the buddy wears.
+const growth = new Progression(buddy, speciesById(save.species ?? '') ?? PUFF, save.growth);
+const persist = () => {
+  save.growth = growth.state;
+  save.species = growth.base.id;
+  writeSave(save);
+};
 
 let simTime = 0;
 const host = new BrowserHost(buddy, () => simTime);
@@ -25,14 +34,14 @@ buddy.bus.on((e) => {
     save.discovered = [...buddy.discovered];
     writeSave(save);
   }
-  if (e.type === 'word_eaten' && e.data.affinity !== 'unknown') {
-    const a = String(e.data.affinity);
-    save.affinities[a] = (save.affinities[a] ?? 0) + 1;
-    writeSave(save);
-  }
+  if (e.type === 'word_eaten' || e.type === 'buddy_evolved') persist();
 });
-const inspector = new Inspector(buddy, save.affinities);
-setInterval(() => inspector.tick(), 300);
+const inspector = new Inspector(buddy);
+setInterval(() => {
+  inspector.tick();
+  inspector.renderGrowth(growth.status());
+}, 300);
+setInterval(persist, 5000);
 
 // Audio may only start after a gesture.
 const unlock = () => audio.unlock();
@@ -49,12 +58,14 @@ readTheme();
 setInterval(readTheme, 1500);
 
 // Pantry chips: drag onto Puff, or tap to toss.
-const PANTRY = ['mushroom', 'honey', 'thunder', 'synth', 'moonbeam', 'laptop', 'hug', 'drizzle', 'dragon', 'sourdough', 'riddle', 'quarterly synergy', 'an entire wheel of cheese'];
+const PANTRY = ['ember', 'chili pepper', 'raindrop', 'ocean', 'mushroom', 'pebble', 'breeze', 'feather', 'sunbeam', 'honey', 'midnight', 'riddle', 'thunder', 'quarterly synergy', 'an entire wheel of cheese'];
 const pantry = document.getElementById('pantry')!;
 for (const w of PANTRY) {
   const chip = document.createElement('span');
   chip.className = 'chip';
-  chip.textContent = w;
+  const el = classifyElement(w);
+  chip.innerHTML = `<i style="background:${el ? ELEMENT_STYLE[el].tint : 'transparent'}"></i>${w}`;
+  chip.title = el ? `Counts toward ${ELEMENT_STYLE[el].name}` : 'No element';
   chip.draggable = true;
   chip.tabIndex = 0;
   chip.setAttribute('role', 'button');
@@ -113,21 +124,30 @@ $('bCall').onclick = () => {
   buddy.emit('buddy_called');
 };
 
-// Species picker: swap the creature's body; mood, discoveries and behavior carry over.
+$('bGrow').onclick = () => {
+  growth.fastForward();
+  audio.unlock();
+};
+$('bReset').onclick = () => {
+  growth.reset();
+  persist();
+  inspector.renderGrowth(growth.status());
+};
+
+// Species picker: swap the base species; stage, elements, mood and discoveries carry over.
 const speciesEl = document.getElementById('species')!;
 const renderSpecies = () => {
-  const cur = buddy.c.species;
-  document.getElementById('bname')!.textContent = cur.name;
-  document.getElementById('bstage')!.textContent = `Stage I · ${cur.tagline}`;
+  const cur = growth.base;
+  document.getElementById('bstage')!.textContent = cur.tagline;
   speciesEl.innerHTML = '';
   for (const sp of SPECIES) {
     const b = document.createElement('button');
     b.setAttribute('aria-pressed', String(sp.id === cur.id));
     b.innerHTML = `<i style="background:${sp.palette.fur}"></i>${sp.name}`;
     b.onclick = () => {
-      buddy.c.species = sp;
-      save.species = sp.id;
-      writeSave(save);
+      growth.setBase(sp);
+      persist();
+      inspector.renderGrowth(growth.status());
       audio.unlock();
       audio.play('chirp');
       renderSpecies();
@@ -138,7 +158,8 @@ const renderSpecies = () => {
 renderSpecies();
 
 // Main loop.
-buddy.emit('buddy_arrived', { species: buddy.c.species.id });
+buddy.emit('buddy_arrived', { species: growth.base.id, stage: growth.state.stage });
+inspector.renderGrowth(growth.status());
 let last = performance.now();
 const frame = (ts: number) => {
   const dt = Math.min(0.033, (ts - last) / 1000);
@@ -146,6 +167,7 @@ const frame = (ts: number) => {
   simTime += dt;
   const world = host.snapshot();
   buddy.update(world, dt);
+  growth.tick();
   renderer.draw(buddy.c, buddy.effects, world, buddy.now, theme, buddy.activityLabel);
   requestAnimationFrame(frame);
 };
