@@ -36,6 +36,8 @@ export interface SpeciesDesign {
   /** Hovers slightly above the ground. */
   floats: boolean;
   gait: Gait;
+  /** The body draws its own elemental feature (Pip's flowers), so skip the generic crest and mantle. */
+  ownCrest?: boolean;
   // Filled in by the form resolver. Base species are Stage II with no element.
   stage: Stage;
   element: Element | null;
@@ -86,6 +88,8 @@ export interface Species {
   stageNames: [string, string, string];
   /** Stems combined with element prefixes for Stage IV and V, e.g. Ember + cap. */
   formStems: [string, string];
+  /** Hand-picked Stage IV and V names that replace the prefix + stem pattern. */
+  formNames?: { 4: Record<Element, string>; 5: Record<Element, string> };
   radius: number;
   palette: Palette;
   anatomy: Anatomy;
@@ -117,16 +121,20 @@ export const PIP: Species = {
   id: 'pip',
   name: 'Pip',
   kind: 'seed',
-  tagline: 'Curious, bouncy, always climbing',
+  tagline: 'Curious, bouncy, grows into a flower',
   stageNames: ['Pipseed', 'Pip', 'Pipsprout'],
   formStems: ['pip', 'bloom'],
+  formNames: {
+    4: { fire: 'Emberbud', water: 'Tidebud', earth: 'Pebblebud', air: 'Breezebud', light: 'Halobud', shadow: 'Duskbud' },
+    5: { fire: 'Blazepoppy', water: 'Tidelotus', earth: 'Sunbloom', air: 'Wishpuff', light: 'Starbloom', shadow: 'Moonbloom' },
+  },
   radius: 28,
   palette: {
     fur: '#d8a465', furLight: '#f3cf94', furDark: '#a8743c', belly: '#f3dcae', limb: '#c99558', lid: '#d8a465',
     innerEar: '#e9c48c', pad: '#b98760', line, iris: '#2a1c3a', pupil: '#120c14', nose: '#c4486f', accent: '#7cc35e', accentDark: '#4f8f3a',
   },
   anatomy: { face: { x: 0, y: 24, size: 41, mouthDy: 0.3 }, core: { cy: 22, r: 46 }, top: -58, feet: { dx: 13, w: 11, h: 7 } },
-  design: { body: 'pip', eyes: 2, eyeScale: 1.05, sclera: false, nose: false, teeth: false, floats: false, gait: 'scamper', ...form },
+  design: { body: 'pip', eyes: 2, eyeScale: 1.05, sclera: false, nose: false, teeth: false, floats: false, gait: 'scamper', ownCrest: true, ...form },
   traits: { speed: 1.1, jump: 1.25, bias: { explore: 1.7, peek: 1.5, hop: 1.4, inspect: 1.2, nap: 0.8 } },
 };
 

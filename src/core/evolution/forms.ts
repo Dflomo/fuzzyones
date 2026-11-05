@@ -37,6 +37,11 @@ export function mixHex(a: string, b: string, t: number): string {
 export function formName(base: Species, form: Form): string {
   if (form.stage <= 3) return base.stageNames[form.stage - 1];
   if (!form.element) return base.stageNames[2];
+  if (base.formNames) {
+    const name = base.formNames[form.stage as 4 | 5][form.element];
+    if (form.stage === 5 && form.secondary) return `${ELEMENT_STYLE[form.secondary].prefix[0]} ${name}`;
+    return name;
+  }
   const stem = base.formStems[form.stage === 4 ? 0 : 1];
   const p = ELEMENT_STYLE[form.element].prefix[form.stage === 4 ? 0 : 1];
   if (form.stage === 5 && form.secondary) {

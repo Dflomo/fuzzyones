@@ -8,6 +8,7 @@
  * elemental marks and the evolution glow.
  */
 import type { CreatureState } from '../core/creature/state';
+import { drawBud, drawFlower } from './flowers';
 import { dark, ell, light, plainEll, seeded, shape, strand } from './vinyl';
 
 export interface BodyDrawer {
@@ -131,17 +132,26 @@ const pip: BodyDrawer = {
     ctx.rotate(0.2 - droop);
     leaf(ctx, light(p.accent, 0.12), 1, 32);
     ctx.restore();
-    if (stage3(c)) {
-      // a third leaf and a bud
+    const d = c.species.design;
+    if (d.stage >= 3) {
+      // the stem keeps growing above the leaves and ends in a bud, then a flower
+      const len = d.stage === 3 ? 16 : d.stage === 4 ? 24 : 26;
+      const happy = c.expr === 'happy' ? Math.sin(t * 8) * 0.08 : 0;
+      const sad = c.expr === 'sad' || c.expr === 'sleepy' || c.asleep ? 0.45 : 0;
       ctx.save();
-      ctx.rotate(Math.sin(t * 2.2) * 0.1);
+      ctx.rotate(Math.sin(t * 2.2) * 0.05);
       strand(ctx, () => {
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.lineTo(0, -12);
-      }, 2.4, p.accentDark);
-      ell(ctx, 0, -16, 6, 7, '#ffb7c9');
-      ell(ctx, 0, -19, 3, 3, '#ffd76a', { flat: true });
+        ctx.quadraticCurveTo(3, -len * 0.5, 0, -len);
+      }, 3, p.accentDark);
+      ctx.translate(0, -len);
+      ctx.rotate(happy + sad * (c.facing > 0 ? 1 : -1));
+      if (d.stage === 5 && d.element) {
+        const open = c.asleep ? 0 : c.expr === 'sleepy' ? 0.5 : 1;
+        ctx.translate(0, -16);
+        drawFlower(ctx, d.element, d.secondary, t, open, 31);
+      } else drawBud(ctx, d.stage === 4 ? d.element : null, t, d.stage === 4 ? 34 : 24, p.accent);
       ctx.restore();
     }
     ctx.restore();

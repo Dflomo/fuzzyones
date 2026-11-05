@@ -18,7 +18,7 @@ function cell(parent: HTMLElement, base: Species, form: Form, caption: string, s
   cap.innerHTML = `<b>${title ?? formName(base, form)}</b><span>${caption}</span>`;
   fig.append(canvas, cap);
   parent.appendChild(fig);
-  const H = form.stage === 5 ? 190 : form.stage === 4 ? 165 : 140;
+  const H = form.stage === 5 ? 215 : form.stage === 4 ? 185 : 152;
   const r = new CanvasRenderer(canvas);
   r.resize(W, H, devicePixelRatio);
   const sp = resolveForm(base, form);

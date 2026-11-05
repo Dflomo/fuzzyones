@@ -49,7 +49,10 @@ describe('forms', () => {
 
   it('names every form', () => {
     expect(formName(CAPPY, { stage: 1, element: null, secondary: null })).toBe('Capling');
-    expect(formName(PIP, { stage: 4, element: 'earth', secondary: null })).toBe('Pebblepip');
+    expect(formName(PIP, { stage: 4, element: 'earth', secondary: null })).toBe('Pebblebud');
+    expect(formName(PIP, { stage: 5, element: 'earth', secondary: null })).toBe('Sunbloom');
+    expect(formName(PIP, { stage: 5, element: 'air', secondary: null })).toBe('Wishpuff');
+    expect(formName(PIP, { stage: 5, element: 'fire', secondary: 'shadow' })).toBe('Dusk Blazepoppy');
     expect(formName(BEAN, { stage: 5, element: 'fire', secondary: null })).toBe('Blazegazer');
     expect(formName(CAPPY, { stage: 5, element: 'water', secondary: 'light' })).toBe('Abyss-Halo Shroom');
   });
@@ -139,7 +142,7 @@ describe('progression', () => {
     feed(['ocean', 'raindrop', 'river']);
     grow();
     growth.setBase(PIP);
-    expect(buddy.c.species.name).toBe('Tidepip');
+    expect(buddy.c.species.name).toBe('Tidebud');
     expect(buddy.c.species.radius).toBeGreaterThan(PIP.radius);
   });
 

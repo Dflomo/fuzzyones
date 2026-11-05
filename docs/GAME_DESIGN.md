@@ -11,7 +11,7 @@ Five species share every behavior, reaction and physics rule. Only the body and 
 | Species | What it is | Look | Gait | Speed / hop | Loves | Avoids |
 | --- | --- | --- | --- | --- | --- | --- |
 | Cappy | Mushroom | Red spotted cap that bobs on a cream stem, face on the stem | Waddle | 0.8 / 0.85 | Naps, grooming, peeking | Chasing, hopping |
-| Pip | Seed | Striped almond seed with a two-leaf sprout that sways | Scamper (bouncy) | 1.1 / 1.25 | Leaping to ledges, peeking, hopping | Naps |
+| Pip | Seed | Striped almond seed with a two-leaf sprout that sways; grows into a flower (see below) | Scamper (bouncy) | 1.1 / 1.25 | Leaping to ledges, peeking, hopping | Naps |
 | Blorp | Squishy alien | Mint jelly gumdrop with a drippy bottom, bubbles inside, antennae, a tiny third eye | Jiggle | 0.95 / 1.15 | Belly flops, dancing, hopping | Peeking |
 | Bean | Cuddly cyclops | Tall orange bean, one big eye, round ears, hair tuft, two tiny teeth, mitten feet | Stride | 1.0 / 0.9 | Cursor cuddles, chasing | Exploring |
 | Oddling | Wire tangle | Springy copper and teal wires with coils poking out, one eye on a cream disc, floppy ear, curly antenna, ringed tail | Wobble | 1.15 / 1.2 | Investigating, stretching, peeking | Cuddles |
@@ -29,6 +29,21 @@ Five species share every behavior, reaction and physics rule. Only the body and 
 | III | 110% | Stage III flourish: a baby mushroom sprouts on Cappy's cap, Pip's sprout grows a bud, a tiny moon orbits Blorp, Bean grows horns, Oddling's antenna bobble lights up |
 | IV | 118% | Takes an element: fur tint, iris color, head crest, body marks, aura, ambient particles |
 | V | 128% | Deepens the element with a mantle behind the body, or blends in a second element's marks and particles |
+
+### Pip's flowers (Director, 2026-11-04)
+
+Pip evolves into flowers instead of taking the generic crest and mantle. Stage III grows a closed green bud. Stage IV opens a bud showing its element's petals. Stage V blooms:
+
+| Element | Stage IV bud | Stage V flower |
+| --- | --- | --- |
+| Fire | Emberbud | Blazepoppy: wide red-orange poppy, petal tips flicker |
+| Water | Tidebud | Tidelotus: two rings of pointed blue petals, a droplet on one |
+| Earth | Pebblebud | Sunbloom: sunflower with a big seedy center |
+| Air | Breezebud | Wishpuff: dandelion seed puff |
+| Light | Halobud | Starbloom: glowing five-pointed starflower |
+| Shadow | Duskbud | Moonbloom: layered dark moonflower with a tiny crescent |
+
+Blends alternate petals with the second element's colors and get its prefix: Dusk Blazepoppy, Halo Tidelotus. The flower nods when Pip is happy, droops when it is sad or sleepy, and folds closed while it naps.
 
 ### Elements
 

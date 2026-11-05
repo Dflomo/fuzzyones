@@ -144,7 +144,7 @@ export class CanvasRenderer {
       fn();
       ctx.restore();
     };
-    atCore(() => drawMantle(ctx, c, t, A.core.r));
+    if (!d.ownCrest) atCore(() => drawMantle(ctx, c, t, A.core.r));
     this.drawFeet(c, airborne, t);
     const armsFront = c.arm === 'chin' || c.pose === 'hug' || c.held || !!c.hang || activity === 'Dancing';
     body.back(ctx, c, t);
@@ -165,7 +165,7 @@ export class CanvasRenderer {
     body.front(ctx, c, t);
     ctx.save();
     ctx.translate(0, A.top + 0.9 * 40);
-    drawCrest(ctx, c, t, 40);
+    if (!d.ownCrest) drawCrest(ctx, c, t, 40);
     ctx.restore();
     if (armsFront) atCore(() => this.drawArms(c, airborne, t, activity, A.core.r));
 
