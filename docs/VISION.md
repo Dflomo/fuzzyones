@@ -409,7 +409,17 @@ Provisional starter species:
 4. Glimmer — Music, light, floating
 5. Oddling — Mystery, mimicry, unusual movement
 
-Target form structure for each species:
+> **Director revision, 2026-11-03.** The form structure below replaces the original 1, 2, 3, 2, 2 branching plan.
+
+Each species has five base stages. Stages I to III are a single growth line. Stages IV and V are shaped by six elements (Fire, Water, Earth, Air, Light, Shadow), which the buddy picks up from the words it is fed:
+
+- Stage I, II, III: one form each
+- Stage IV: one form per element (6), chosen by the buddy's strongest element
+- Stage V: deepens the Stage IV element (6), or blends in a second element when the buddy ate plenty of it after Stage IV (30 ordered pairs)
+
+That gives each species 45 possible forms and 225 across the five starters. Details live in `docs/GAME_DESIGN.md`.
+
+<details><summary>Original plan (superseded)</summary>
 
 - Stage I: 1 starting form
 - Stage II: 2 possible forms
@@ -417,7 +427,8 @@ Target form structure for each species:
 - Stage IV: 2 possible forms
 - Stage V: 2 possible ultimate forms
 
-This produces a provisional total of **50 discoverable evolutionary forms**.
+This produced a provisional total of 50 discoverable evolutionary forms.
+</details>
 
 Evolution conditions may depend on:
 

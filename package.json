@@ -1,0 +1,22 @@
+{
+  "name": "fuzzy-buddies",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Autonomous fuzzy browser companions. Phase 1: Puff.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "jsdom": "25.0.1",
+    "typescript": "5.6.3",
+    "vite": "5.4.11",
+    "vitest": "2.1.8"
+  }
+}
