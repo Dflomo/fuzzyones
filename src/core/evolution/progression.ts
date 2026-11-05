@@ -161,10 +161,15 @@ export class Progression {
   }
 
   private onEvent(e: BuddyEvent): void {
-    if (e.type === 'word_eaten' && typeof e.data.element === 'string' && e.data.element !== 'none') {
-      const el = e.data.element as Element;
-      this.state.elements[el] += 1;
-      if (this.state.stage >= 4) this.state.sinceIV[el] += 1;
+    // Event payloads are runtime data, so TypeScript casts cannot validate them.
+    // Ignore unknown element identifiers rather than corrupting the counters.
+    if (e.type === 'word_eaten' && typeof e.data.element === 'string') {
+      const el = e.data.element;
+      if (ELEMENTS.some((candidate) => candidate === el)) {
+        const validElement = el as Element;
+        this.state.elements[validElement] += 1;
+        if (this.state.stage >= 4) this.state.sinceIV[validElement] += 1;
+      }
     }
     const pts = GROWTH_POINTS[e.type];
     if (!pts || this.state.stage >= 5) return;
