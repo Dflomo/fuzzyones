@@ -73,6 +73,26 @@ describe('stage V rule', () => {
 });
 
 describe('progression', () => {
+  it('ignores malformed element identifiers without corrupting counters', () => {
+    const { buddy, growth } = rig();
+    const initial = { ...growth.state.elements };
+    buddy.bus.emit('word_eaten', 1, { word: 'oops', element: 'unknown-element' });
+    buddy.bus.emit('word_eaten', 2, { word: 'nothing', element: 'none' });
+    expect(growth.state.elements).toEqual(initial);
+    expect((growth.state.elements as Record<string, number>)['unknown-element']).toBeUndefined();
+    expect(Object.values(growth.state.elements).every(Number.isFinite)).toBe(true);
+
+    buddy.bus.emit('word_eaten', 3, { word: 'ember', element: 'fire' });
+    expect(growth.state.elements.fire).toBe(initial.fire + 1);
+
+    growth.state.stage = 4;
+    const beforeSinceIV = { ...growth.state.sinceIV };
+    buddy.bus.emit('word_eaten', 4, { word: 'invalid', element: 'not-an-element' });
+    expect(growth.state.sinceIV).toEqual(beforeSinceIV);
+    buddy.bus.emit('word_eaten', 5, { word: 'river', element: 'water' });
+    expect(growth.state.sinceIV.water).toBe(beforeSinceIV.water + 1);
+  });
+
   it('finishes the body swap even if the evolution is interrupted', () => {
     const { buddy, growth, run } = rig(3);
     run(2);
