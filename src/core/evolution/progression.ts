@@ -75,6 +75,40 @@ export function stageFiveForm(primary: Element, sinceIV: Record<Element, number>
   return { stage: 5, element: primary, secondary: blend };
 }
 
+/** Normalize persisted JSON at the core boundary; old or edited saves are untrusted. */
+function safeElementCounts(value: unknown): Record<Element, number> {
+  const out = emptyElements();
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+  const record = value as Record<string, unknown>;
+  for (const element of ELEMENTS) {
+    const count = record[element];
+    if (typeof count === 'number' && Number.isFinite(count) && count >= 0) out[element] = count;
+  }
+  return out;
+}
+
+function safeElement(value: unknown): Element | null {
+  return typeof value === 'string' && ELEMENTS.some((element) => element === value) ? value as Element : null;
+}
+
+export function sanitizeGrowthSave(saved: GrowthSave): GrowthSave {
+  const stage = [1, 2, 3, 4, 5].includes(saved.stage) ? saved.stage : 1;
+  const primary = safeElement(saved.element);
+  // A Stage IV/V form cannot exist without its primary element.
+  const safeStage = stage >= 4 && !primary ? 3 : stage;
+  const growth = typeof saved.growth === 'number' && Number.isFinite(saved.growth) && saved.growth >= 0 ? saved.growth : 0;
+  const secondary = safeStage === 5 ? safeElement(saved.secondary) : null;
+  return {
+    base: saved.base,
+    stage: safeStage as Stage,
+    growth,
+    elements: safeElementCounts(saved.elements),
+    sinceIV: safeElementCounts(saved.sinceIV),
+    element: safeStage >= 4 ? primary : null,
+    secondary: secondary === primary ? null : secondary,
+  };
+}
+
 export class Progression {
   readonly state: GrowthSave;
   private recent = new Map<string, { at: number; n: number }>();
@@ -82,7 +116,7 @@ export class Progression {
   base: Species;
 
   constructor(private buddy: Buddy, base: Species, saved?: GrowthSave | null) {
-    this.state = saved && speciesById(saved.base) ? { ...saved, elements: { ...saved.elements }, sinceIV: { ...saved.sinceIV } } : newGrowth(base.id);
+    this.state = saved && speciesById(saved.base) ? sanitizeGrowthSave(saved) : newGrowth(base.id);
     this.base = speciesById(this.state.base) ?? base;
     buddy.c.species = resolveForm(this.base, this.form);
     this.unsub = buddy.bus.on((e) => this.onEvent(e));
