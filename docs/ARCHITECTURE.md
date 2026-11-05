@@ -72,19 +72,37 @@ These are hard requirements from the vision:
 1. The overlay canvas has `pointer-events: none`. The host only calls `preventDefault` on presses that hit the buddy, and on drag-over near it.
 2. Typing reactions run after the event. Nothing is captured, delayed, or blocked.
 3. Password, card, one-time-code fields, and anything marked `data-fuzzy-ignore` are ignored. Field values are never read.
-4. Inspected text is reduced locally to a handful of single words per approved surface. Nothing is sent anywhere. Persistence is `localStorage` only.
-5. Hide and Call are always one click away.
+4. Page reading is **off by default** (`HostOptions.inspectText`); the extension will turn it on per site from the user's allow list, and the playground opts in because it is our own page.
+5. When reading is on, `browser/pageWords.ts` skips every field, editable region (`contenteditable`, `role="textbox"`), form, select, script and `data-fuzzy-ignore` subtree, even when nested inside a readable surface, and keeps at most 40 single words per surface. Nothing is sent anywhere. Persistence is `localStorage` only.
+6. Cached words are dropped by a `MutationObserver` when a surface's text or relevant attributes change, and the surface list is re-scanned (at most twice a second) when elements are added or removed.
+7. The site's own inline cursor is saved before showing a grab cursor and restored afterwards.
+8. Hide and Call are always one click away.
 
 ## Rendering
 
 Canvas 2D, procedural, at device pixel ratio up to 2x, in a squishy vinyl style (`rendering/vinyl.ts`). Each species body (`rendering/bodies.ts`) is drawn in design units and scaled to its physics radius; faces, arms, feet and elemental overlays are shared and anchored per species through `Species.anatomy`, so evolution forms need no per-form art. Secondary motion (ears, tail, arm lag, lean, breathing, face parallax) is simulated in `core/animation/rig.ts` so it stays deterministic and testable; the renderer only adds visual easing between poses. `/sheet.html` renders every pose and expression for art review. See ADR 0002.
+
+## Performance
+
+`node scripts/perf-surfaces.mjs` builds the site and runs `/perf.html` in headless Chromium: a long synthetic article (headings, paragraphs, figures, quotes, code, tables, and forms that must be skipped), the real-page selector, scrolling 40 px per frame for 600 frames. Target: under 1 ms per frame for surface discovery.
+
+Results, 2026-11-04, headless Chrome, 1280 by 800:
+
+| Surfaces on page | Reading words | Median | p95 | Max | Frames over 1 ms |
+| --- | --- | --- | --- | --- | --- |
+| 171 | on | 0.1 ms | 0.2 ms | 3.6 ms | 17 of 600 |
+| 570 | on | 0.1 ms | 0.7 ms | 3.8 ms | 28 of 600 |
+| 1,707 | on | 0.1 ms | 0.2 ms | 1.9 ms | 1 of 600 |
+| 1,707 | off | 0.1 ms | 0.2 ms | 2.9 ms | 2 of 600 |
+
+Before the IntersectionObserver change, cost grew with page length (1,707 surfaces: 2.8 ms median, 7.4 ms p95). The occasional spikes also appear with reading off, so they are not word extraction; likely layout after the benchmark's programmatic scroll, or GC. The creature engine's own update is under 0.05 ms.
 
 ## Known risks
 
 | Risk | Mitigation now | Later |
 | --- | --- | --- |
 | Arbitrary page CSS and layout | Playground uses explicit `data-surface` | Extension mounts in a closed shadow root. Surface discovery heuristics for headings, images and block edges, capped per frame |
-| Layout cost of measuring rects | Only listed elements, measured once per frame | IntersectionObserver for visibility, measure only candidates near the buddy |
+| Layout cost of measuring rects | An IntersectionObserver keeps the set of surfaces within 200 px of the viewport; only those (plus the buddy's own platform) are measured each frame. Benchmark below | Investigate the rare 2 to 4 ms frames |
 | Sound becoming annoying | Pitch variance, gesture-gated start, toggle | Per-cue cooldowns, quiet hours, volume slider |
 | Behavior loops | Repeat penalty plus noise | Longer-term memory of preferred activities |
 | Fixed-step determinism | Variable dt, clamped to 33 ms | Fixed 120 Hz substeps if physics bugs appear |

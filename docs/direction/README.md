@@ -10,7 +10,7 @@ This folder is how the creative team talks to engineering asynchronously.
 
 ## How it works
 
-1. **One note per topic.** Add a file named `YYYY-MM-DD-short-topic.md`, using `TEMPLATE.md`.
+1. **One note per topic.** Add a file named `YYYY-MM-DD-short-topic.md`, using `TEMPLATE.md`. Comments on pull requests and issues work too; engineering checks both at the start of each session.
 2. **Status at the top:** `open`, `in progress`, `done`, `needs Director`, or `declined`.
 3. **Engineering reads every open note** at the start of each working session, and replies in the same file under `## Engineering response`. It covers what will be built, questions, risks, and a link to the PR when done.
 4. **The Director decides.** Notes from the Co-Director that change vision, scope, or something the Director already decided are marked `needs Director` and wait for Derek's approval before any work. Everything else can go ahead.

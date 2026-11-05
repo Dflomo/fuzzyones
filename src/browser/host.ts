@@ -6,17 +6,29 @@
  * - Only observe page events. Never preventDefault outside the buddy's own hit area.
  * - Typing reactions happen after the keystroke; nothing here delays input.
  * - Password and sensitive fields are ignored entirely, and no field values are read.
- * - Page text is reduced to single words, locally, only for approved surfaces.
+ * - Page text is read only when inspection is on for the site (off by default),
+ *   never inside fields, editable regions or forms, and reduced to single words locally.
+ * - The site's own cursor styling is saved and restored, never overwritten.
  */
 import type { Buddy } from '../core/buddy';
 import type { Surface, SurfaceKind, WorldSnapshot } from '../core/world';
+import { SurfaceWords } from './pageWords';
 
 export interface HostOptions {
   /** Which elements count as terrain. The playground marks them with data-surface. */
   surfaceSelector?: string;
   /** Radius (px) around the buddy that accepts dropped words. */
   dropRadius?: number;
+  /**
+   * Let the buddy read words off this page. Off by default: the extension
+   * turns it on per site from the user's allow list. The playground is our own
+   * page, so it opts in.
+   */
+  inspectText?: boolean;
 }
+
+/** Surfaces on arbitrary pages (used once the extension runs on real sites). */
+export const REAL_PAGE_SELECTOR = 'h1, h2, h3, h4, img, figure, blockquote, pre, table, [data-surface]';
 
 const SENSITIVE_INPUT = 'input[type=password], input[autocomplete*="cc-"], input[autocomplete="one-time-code"], [data-fuzzy-ignore]';
 
@@ -25,6 +37,9 @@ export class BrowserHost {
   private ids = new WeakMap<Element, string>();
   private nextId = 1;
   private surfaceEls: Element[] = [];
+  /** Surfaces near the viewport, kept up to date by an IntersectionObserver. */
+  private nearby = new Set<Element>();
+  private io: IntersectionObserver | null = null;
   private pressed = false;
   private pressStart = { x: 0, y: 0 };
   private lastMoveTime = 0;
@@ -32,10 +47,18 @@ export class BrowserHost {
   private disposers: (() => void)[] = [];
   private readonly selector: string;
   private readonly dropRadius: number;
+  private readonly inspect: boolean;
+  private readonly words: SurfaceWords;
+  private lastRescan = 0;
+  /** The page's own inline cursor, saved while we show grab cursors. */
+  private savedCursor: string | null = null;
+  private cursorShown: '' | 'grab' | 'grabbing' = '';
 
   constructor(private buddy: Buddy, private clock: () => number, opts: HostOptions = {}) {
     this.selector = opts.surfaceSelector ?? '[data-surface]';
     this.dropRadius = opts.dropRadius ?? 110;
+    this.inspect = opts.inspectText ?? false;
+    this.words = new SurfaceWords(document.body);
     this.world = {
       width: innerWidth,
       height: innerHeight,
@@ -50,6 +73,21 @@ export class BrowserHost {
   /** Re-scan for surface elements (call after page content changes). */
   refreshSurfaceList(): void {
     this.surfaceEls = [...document.querySelectorAll(this.selector)];
+    if (typeof IntersectionObserver === 'undefined') return;
+    // Only surfaces within a margin of the viewport are measured each frame,
+    // so cost tracks what is on screen rather than the length of the page.
+    this.io?.disconnect();
+    this.nearby.clear();
+    this.io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) this.nearby.add(e.target);
+          else this.nearby.delete(e.target);
+        }
+      },
+      { rootMargin: '200px 0px' },
+    );
+    for (const el of this.surfaceEls) this.io.observe(el);
   }
 
   /** Build this frame's snapshot. Only visible elements are measured. */
@@ -57,11 +95,28 @@ export class BrowserHost {
     const w = this.world;
     w.width = innerWidth;
     w.height = innerHeight;
+    // Elements were added or removed: re-scan, at most twice a second.
+    const now = this.clock();
+    if (this.words.structureChanged && now - this.lastRescan > 0.5) {
+      this.words.structureChanged = false;
+      this.lastRescan = now;
+      this.refreshSurfaceList();
+    }
     const out: Surface[] = [];
-    for (const el of this.surfaceEls) {
+    let candidates: Iterable<Element> = this.surfaceEls;
+    if (this.io) {
+      // Always measure the platform the buddy stands on, even if the observer
+      // has not caught up with a fast scroll yet.
+      const plat = this.buddy.c.platformId ? this.surfaceEls.find((e) => this.ids.get(e) === this.buddy.c.platformId) : undefined;
+      candidates = plat && !this.nearby.has(plat) ? [...this.nearby, plat] : this.nearby;
+    }
+    for (const el of candidates) {
       const r = el.getBoundingClientRect();
       if (r.width <= 0 || r.bottom < -80 || r.top > w.height + 80) continue;
-      out.push({ id: this.idFor(el), kind: kindOf(el), top: r.top, left: r.left, right: r.right, bottom: r.bottom, words: wordsOf(el) });
+      const kind = kindOf(el);
+      // Never read anything around form fields, and nothing at all unless inspection is on.
+      const words = this.inspect && kind !== 'input' ? this.words.get(el) : [];
+      out.push({ id: this.idFor(el), kind, top: r.top, left: r.left, right: r.right, bottom: r.bottom, words });
     }
     w.surfaces = out;
     if (this.clock() - this.dragSeenAt > 0.5) w.dragPoint = null;
@@ -71,6 +126,22 @@ export class BrowserHost {
   dispose(): void {
     for (const d of this.disposers) d();
     this.disposers = [];
+    this.words.dispose();
+    this.io?.disconnect();
+    this.setCursor('');
+  }
+
+  /** Show a grab cursor over the buddy without clobbering the site's own cursor style. */
+  private setCursor(want: '' | 'grab' | 'grabbing'): void {
+    if (want === this.cursorShown) return;
+    const style = document.documentElement.style;
+    if (want && this.savedCursor === null) this.savedCursor = style.cursor;
+    if (want) style.cursor = want;
+    else if (this.savedCursor !== null) {
+      style.cursor = this.savedCursor;
+      this.savedCursor = null;
+    }
+    this.cursorShown = want;
   }
 
   private idFor(el: Element): string {
@@ -107,7 +178,7 @@ export class BrowserHost {
       this.lastMoveTime = now;
       if (this.pressed && !b.c.held && Math.hypot(p.x - this.pressStart.x, p.y - this.pressStart.y) > 6) b.pickUp();
       const over = b.hitTest(p.x, p.y);
-      document.documentElement.style.cursor = b.c.held ? 'grabbing' : over ? 'grab' : '';
+      this.setCursor(b.c.held ? 'grabbing' : over ? 'grab' : '');
       if (!b.c.held && !this.pressed && over && e.pointerType === 'mouse') b.rubbed(Math.hypot(dx, dy));
       else if (!over) b.rubStopped();
     }, { passive: true });
@@ -136,7 +207,7 @@ export class BrowserHost {
       if (b.c.held) b.release(p.vx, p.vy);
       else if (this.pressed) b.poke();
       this.pressed = false;
-      document.documentElement.style.cursor = '';
+      this.setCursor('');
     }, { capture: true });
     this.on('pointercancel', () => {
       if (b.c.held) b.release(p.vx, p.vy);
@@ -189,22 +260,10 @@ export class BrowserHost {
   }
 }
 
-function kindOf(el: Element): SurfaceKind {
+export function kindOf(el: Element): SurfaceKind {
   const k = (el as HTMLElement).dataset?.surface;
   if (k === 'heading' || k === 'image' || k === 'input' || k === 'text') return k;
   if (/^H[1-6]$/.test(el.tagName)) return 'heading';
   if (el.tagName === 'IMG' || el.tagName === 'PICTURE') return 'image';
   return 'other';
-}
-
-const wordCache = new WeakMap<Element, string[]>();
-function wordsOf(el: Element): string[] {
-  let w = wordCache.get(el);
-  if (w) return w;
-  const explicit = (el as HTMLElement).dataset?.word;
-  if (explicit) w = explicit.split(',').map((s) => s.trim()).filter(Boolean);
-  else if (kindOf(el) === 'input') w = []; // never read anything near form fields
-  else w = (el.textContent?.match(/[A-Za-z]{4,}/g) ?? []).slice(0, 40);
-  wordCache.set(el, w);
-  return w;
 }

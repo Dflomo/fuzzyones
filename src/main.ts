@@ -22,7 +22,8 @@ const persist = () => {
 };
 
 let simTime = 0;
-const host = new BrowserHost(buddy, () => simTime);
+// The playground is our own page, so the buddy may read it.
+const host = new BrowserHost(buddy, () => simTime, { inspectText: true });
 const renderer = new CanvasRenderer(document.getElementById('stage') as HTMLCanvasElement);
 const resize = () => renderer.resize(innerWidth, innerHeight, devicePixelRatio);
 resize();

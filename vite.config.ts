@@ -8,6 +8,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         sheet: resolve(__dirname, 'sheet.html'),
+        perf: resolve(__dirname, 'perf.html'),
       },
     },
   },
