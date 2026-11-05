@@ -2,7 +2,7 @@ import { Buddy } from '../src/core/buddy';
 import { BEAN, CAPPY, PIP, SPECIES } from '../src/core/creature/species';
 import { classifyElement, emptyElements } from '../src/core/evolution/elements';
 import { formName, resolveForm } from '../src/core/evolution/forms';
-import { Progression, stageFiveForm, THRESHOLDS } from '../src/core/evolution/progression';
+import { Progression, sanitizeGrowthSave, stageFiveForm, THRESHOLDS } from '../src/core/evolution/progression';
 import { createRng } from '../src/core/random';
 import { emptyWorld } from '../src/core/world';
 
@@ -72,6 +72,52 @@ describe('stage V rule', () => {
   it('blends when a second element is close behind', () => {
     const since = { ...emptyElements(), fire: 4, water: 4 };
     expect(stageFiveForm('fire', since)).toEqual({ stage: 5, element: 'fire', secondary: 'water' });
+  });
+});
+
+describe('persisted growth validation', () => {
+  it('drops unknown keys and non-finite or negative counters', () => {
+    const saved = {
+      base: 'cappy', stage: 4, growth: Number.POSITIVE_INFINITY,
+      elements: { fire: 5, water: Number.NaN, earth: -3, unknown: 999 },
+      sinceIV: { fire: 2, shadow: 'oops', unknown: 5 },
+      element: 'fire', secondary: 'not-an-element',
+    } as unknown as Parameters<typeof sanitizeGrowthSave>[0];
+    const clean = sanitizeGrowthSave(saved);
+    expect(clean.stage).toBe(4);
+    expect(clean.growth).toBe(0);
+    expect(clean.elements).toEqual({ ...emptyElements(), fire: 5 });
+    expect(clean.sinceIV).toEqual({ ...emptyElements(), fire: 2 });
+    expect(clean.secondary).toBeNull();
+    expect(Object.keys(clean.elements)).toHaveLength(6);
+  });
+
+  it('repairs incomplete saves and impossible evolved forms', () => {
+    const bad = {
+      base: 'cappy', stage: 5, growth: -1,
+      elements: null, sinceIV: undefined, element: 'unknown', secondary: 'water',
+    } as unknown as Parameters<typeof sanitizeGrowthSave>[0];
+    const clean = sanitizeGrowthSave(bad);
+    expect(clean.stage).toBe(3);
+    expect(clean.element).toBeNull();
+    expect(clean.secondary).toBeNull();
+    expect(clean.elements).toEqual(emptyElements());
+    expect(clean.sinceIV).toEqual(emptyElements());
+    const { buddy } = rig();
+    const loaded = new Progression(buddy, CAPPY, bad);
+    expect(loaded.state.stage).toBe(3);
+    expect(loaded.state.elements).toEqual(emptyElements());
+    loaded.dispose();
+  });
+
+  it('preserves valid saved progress and elemental forms', () => {
+    const valid = {
+      base: CAPPY.id, stage: 5 as const, growth: 12,
+      elements: { ...emptyElements(), fire: 8 },
+      sinceIV: { ...emptyElements(), water: 5 },
+      element: 'fire' as const, secondary: 'water' as const,
+    };
+    expect(sanitizeGrowthSave(valid)).toEqual(valid);
   });
 });
 
